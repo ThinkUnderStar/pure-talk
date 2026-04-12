@@ -63,3 +63,6 @@ CREATE TABLE notifications (
 
 ALTER TABLE comments
 ADD COLUMN update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+
+-------------------------------------------------------------------------------------------------------------------------------
+
