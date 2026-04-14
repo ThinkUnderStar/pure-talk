@@ -16,6 +16,7 @@ import thinkunderstar.puretalk.puretalkbackend.mapper.CommentMapper;
 import thinkunderstar.puretalk.puretalkbackend.service.CommentService;
 import thinkunderstar.puretalk.puretalkbackend.service.PostService;
 import thinkunderstar.puretalk.puretalkbackend.service.SysCommentService;
+import thinkunderstar.puretalk.puretalkbackend.util.RedisTokenBucketLimiter;
 import thinkunderstar.puretalk.puretalkbackend.util.RedisUtils;
 
 import java.util.concurrent.TimeUnit;
@@ -27,19 +28,28 @@ public class SysCommentServiceImpl implements SysCommentService {
     private final RedisUtils redisUtils;
     private final CommentMapper commentMapper;
     private final PostService postService;
+    private final RedisTokenBucketLimiter redisTokenBucketLimiter;
 
-    public SysCommentServiceImpl(SensitiveWordManager sensitiveWordManager, CommentService commentService, RedisUtils redisUtils, CommentMapper commentMapper, PostService postService) {
+    public SysCommentServiceImpl(SensitiveWordManager sensitiveWordManager, CommentService commentService, RedisUtils redisUtils, CommentMapper commentMapper, PostService postService, RedisTokenBucketLimiter redisTokenBucketLimiter) {
         this.sensitiveWordManager = sensitiveWordManager;
         this.commentService = commentService;
         this.redisUtils = redisUtils;
         this.commentMapper = commentMapper;
         this.postService = postService;
+        this.redisTokenBucketLimiter = redisTokenBucketLimiter;
     }
 
     @Override
     public Result sendComment(DoSendComment doSendComment) {
         if (doSendComment.getContent() == null || doSendComment.getContent().isEmpty()){
             throw new BusinessException("评论内容不能为空");
+        }
+
+        //用户限流
+        boolean success = redisTokenBucketLimiter.tryAcquireByUser(String.valueOf(doSendComment.getUserId()), 5, 1);
+
+        if (!success){
+            throw new BusinessException("发送过于频繁");
         }
 
         if (sensitiveWordManager.checkSensitiveWord(doSendComment.getContent())){
@@ -100,6 +110,12 @@ public class SysCommentServiceImpl implements SysCommentService {
 
     @Override
     public Result updateLikeCount(long commentId) {
+        //用户限流
+        boolean success = redisTokenBucketLimiter.tryAcquireByUser(StpUtil.getLoginIdAsString(), 10, 1);
+
+        if (!success) {
+            throw new BusinessException("点赞过于频繁");
+        }
 
         Comment comment = commentService.getById(commentId);
 

@@ -1,5 +1,6 @@
 package thinkunderstar.puretalk.puretalkbackend.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import thinkunderstar.puretalk.puretalkbackend.entity.Report;
 import thinkunderstar.puretalk.puretalkbackend.exception.BusinessException;
 import thinkunderstar.puretalk.puretalkbackend.mapper.ReportMapper;
 import thinkunderstar.puretalk.puretalkbackend.service.*;
+import thinkunderstar.puretalk.puretalkbackend.util.RedisTokenBucketLimiter;
 
 @Slf4j
 @Service
@@ -25,8 +27,9 @@ public class SysReportServiceImpl implements SysReportService {
     private final PostService postService;
     private final CommentService commentService;
     private final NotificationService notificationService;
+    private final RedisTokenBucketLimiter redisTokenBucketLimiter;
 
-    public SysReportServiceImpl(ReportService reportService, ReportMapper reportMapper, SysCommentService sysCommentService, SysPostService sysPostService, SysAdminService sysAdminService, PostService postService, CommentService commentService, NotificationService notificationService) {
+    public SysReportServiceImpl(ReportService reportService, ReportMapper reportMapper, SysCommentService sysCommentService, SysPostService sysPostService, SysAdminService sysAdminService, PostService postService, CommentService commentService, NotificationService notificationService, RedisTokenBucketLimiter redisTokenBucketLimiter) {
         this.reportService = reportService;
         this.reportMapper = reportMapper;
         this.sysCommentService = sysCommentService;
@@ -35,12 +38,20 @@ public class SysReportServiceImpl implements SysReportService {
         this.postService = postService;
         this.commentService = commentService;
         this.notificationService = notificationService;
+        this.redisTokenBucketLimiter = redisTokenBucketLimiter;
     }
 
     @Override
     public Result sendReport(DoReport doReport) {
         if (!(doReport.getReportType() == 1 || doReport.getReportType() == 2)){
             throw new BusinessException("举报业务异常");
+        }
+
+        //用户限流
+        boolean success = redisTokenBucketLimiter.tryAcquireByUser(String.valueOf(doReport.getReportUserId()), 3, 1);
+
+        if (!success){
+            throw new BusinessException("举报过于频繁");
         }
 
         Report report = new Report(doReport.getReportUserId(),doReport.getReportType(),doReport.getTargetId(),doReport.getTargetUserId(),doReport.getReason(),0);

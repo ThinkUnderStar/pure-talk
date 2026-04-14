@@ -242,6 +242,13 @@ public class SysUserServiceImpl implements SysUserService {
                 && ValidateUtils.passwordValidate(doRegister.getPassword())) {
             //认证是否为有效手机号与邮箱
             if (doRegister.isRightPhone() && doRegister.isRightEmail()) {
+                //ip限流
+                boolean success = redisTokenBucketLimiter.tryAcquireByIp(IpUtils.getClientIp(request), 3, 1);
+
+                if (!success){
+                    throw new BusinessException("注册过于频繁");
+                }
+
                 //判断用户是否已经存在
                 if (user != null) {
                     if (user.getDeleted() == 0) {

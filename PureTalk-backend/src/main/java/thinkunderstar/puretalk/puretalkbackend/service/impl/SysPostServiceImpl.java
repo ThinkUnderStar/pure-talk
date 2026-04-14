@@ -17,6 +17,7 @@ import thinkunderstar.puretalk.puretalkbackend.mapper.PostMapper;
 import thinkunderstar.puretalk.puretalkbackend.service.CommentService;
 import thinkunderstar.puretalk.puretalkbackend.service.PostService;
 import thinkunderstar.puretalk.puretalkbackend.service.SysPostService;
+import thinkunderstar.puretalk.puretalkbackend.util.RedisTokenBucketLimiter;
 import thinkunderstar.puretalk.puretalkbackend.util.RedisUtils;
 
 import java.math.BigDecimal;
@@ -43,13 +44,15 @@ public class SysPostServiceImpl implements SysPostService {
     private final CommentService commentService;
     private final RedisUtils redisUtils;
     private final PostMapper postMapper;
+    private final RedisTokenBucketLimiter redisTokenBucketLimiter;
 
-    public SysPostServiceImpl(PostService postService, SensitiveWordManager sensitiveWordManager, CommentService commentService, RedisUtils redisUtils, PostMapper postMapper) {
+    public SysPostServiceImpl(PostService postService, SensitiveWordManager sensitiveWordManager, CommentService commentService, RedisUtils redisUtils, PostMapper postMapper, RedisTokenBucketLimiter redisTokenBucketLimiter) {
         this.postService = postService;
         this.sensitiveWordManager = sensitiveWordManager;
         this.commentService = commentService;
         this.redisUtils = redisUtils;
         this.postMapper = postMapper;
+        this.redisTokenBucketLimiter = redisTokenBucketLimiter;
     }
 
     @Override
@@ -57,6 +60,13 @@ public class SysPostServiceImpl implements SysPostService {
 
         if (doSendPost.getContent() == null || doSendPost.getContent().isEmpty()){
             throw new BusinessException("不能发送空文本");
+        }
+
+        //用户限流
+        boolean success = redisTokenBucketLimiter.tryAcquireByUser(String.valueOf(doSendPost.getUserId()), 5, 1);
+
+        if(!success){
+            throw new BusinessException("发送过于频繁");
         }
 
         Post post = new Post();
@@ -117,6 +127,12 @@ public class SysPostServiceImpl implements SysPostService {
 
     @Override
     public Result updateLikeCount(long postId) {
+        //用户限流
+        boolean success = redisTokenBucketLimiter.tryAcquireByUser(StpUtil.getLoginIdAsString(), 10, 1);
+
+        if (!success) {
+            throw new BusinessException("点赞过于频繁");
+        }
 
         Post post = postService.getById(postId);
 

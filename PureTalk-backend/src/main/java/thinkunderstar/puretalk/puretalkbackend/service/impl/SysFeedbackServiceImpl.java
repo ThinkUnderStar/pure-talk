@@ -15,6 +15,7 @@ import thinkunderstar.puretalk.puretalkbackend.mapper.FeedbackMapper;
 import thinkunderstar.puretalk.puretalkbackend.service.FeedbackService;
 import thinkunderstar.puretalk.puretalkbackend.service.NotificationService;
 import thinkunderstar.puretalk.puretalkbackend.service.SysFeedbackService;
+import thinkunderstar.puretalk.puretalkbackend.util.RedisTokenBucketLimiter;
 
 @Slf4j
 @Service
@@ -22,11 +23,13 @@ public class SysFeedbackServiceImpl implements SysFeedbackService {
     private final FeedbackService feedbackService;
     private final FeedbackMapper feedbackMapper;
     private final NotificationService notificationService;
+    private final RedisTokenBucketLimiter redisTokenBucketLimiter;
 
-    public SysFeedbackServiceImpl(FeedbackService feedbackService, FeedbackMapper feedbackMapper, NotificationService notificationService) {
+    public SysFeedbackServiceImpl(FeedbackService feedbackService, FeedbackMapper feedbackMapper, NotificationService notificationService, RedisTokenBucketLimiter redisTokenBucketLimiter) {
         this.feedbackService = feedbackService;
         this.feedbackMapper = feedbackMapper;
         this.notificationService = notificationService;
+        this.redisTokenBucketLimiter = redisTokenBucketLimiter;
     }
 
     @Override
@@ -41,6 +44,13 @@ public class SysFeedbackServiceImpl implements SysFeedbackService {
                 || doFeedback.getContent().isEmpty()){
 
             throw new BusinessException("标题或反馈内容不能为空");
+        }
+
+        //用户限流
+        boolean success = redisTokenBucketLimiter.tryAcquireByUser(String.valueOf(doFeedback.getUserId()), 3, 1);
+
+        if (!success){
+            throw new BusinessException("反馈过于频繁");
         }
 
         feedbackService.save(new Feedback(doFeedback.getUserId(), doFeedback.getTitle(), doFeedback.getContent(), doFeedback.getContact()));

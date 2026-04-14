@@ -20,7 +20,6 @@ import thinkunderstar.puretalk.puretalkbackend.util.IpUtils;
 import thinkunderstar.puretalk.puretalkbackend.util.RedisTokenBucketLimiter;
 import thinkunderstar.puretalk.puretalkbackend.util.ValidateUtils;
 
-import java.net.http.HttpRequest;
 import java.time.LocalDateTime;
 
 @Service

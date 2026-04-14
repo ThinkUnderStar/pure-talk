@@ -88,13 +88,13 @@ uuid
 
 | 序号 | 文件 | 方法 | 限流方式 | 参数 |
 |------|------|------|----------|------|
-| 6 | `PostController.java` | `sendPost()` | 用户限流 | 容量5，速率1/s |
-| 7 | `CommentController.java` | `sendComment()` | 用户限流 | 容量5，速率1/s |
-| 8 | `PostController.java` | `updateLikeCount()` | 用户限流 | 容量10，速率1/s |
-| 9 | `CommentController.java` | `updateLikeCount()` | 用户限流 | 容量10，速率1/s |
-| 10 | `ReportController.java` | `sendReport()` | 用户限流 | 容量3，速率1/s |
-| 11 | `FeedbackController.java` | `sendFeedback()` | 用户限流 | 容量3，速率1/s |
-| 12 | `UserController.java` | `doRegister()` | IP 限流 | 容量3，速率0.1/s |
+| 6 | `PostController.java` | `sendPost()` | 用户限流 | 容量5，速率1/s |ok
+| 7 | `CommentController.java` | `sendComment()` | 用户限流 | 容量5，速率1/s |ok
+| 8 | `PostController.java` | `updateLikeCount()` | 用户限流 | 容量10，速率1/s |ok
+| 9 | `CommentController.java` | `updateLikeCount()` | 用户限流 | 容量10，速率1/s |ok
+| 10 | `ReportController.java` | `sendReport()` | 用户限流 | 容量3，速率1/s |ok
+| 11 | `FeedbackController.java` | `sendFeedback()` | 用户限流 | 容量3，速率1/s |ok
+| 12 | `UserController.java` | `doRegister()` | IP 限流 | 容量3，速率1/s |ok
 
 ---
 
@@ -157,4 +157,5 @@ uuid
 | 反馈 | 用户 | 3 | 0.00028/s | 每小时1次 |
 
 ---
+-------------------------------------------------------------------------------
 
