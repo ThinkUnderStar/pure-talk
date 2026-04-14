@@ -52,6 +52,12 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     public Result sendEmailCode(String email) {
         if (ValidateUtils.emailValidate(email)){
+            boolean success = redisTokenBucketLimiter.tryAcquireByIp(IpUtils.getClientIp(request), 10, 1);
+
+            if (!success){
+                throw new BusinessException("发送验证码过于频繁");
+            }
+
             String code = CodeUtils.getSixDigitCode();
             String codeKey = "MAIL:LOCK:" + email;
             String sendLock = "MAIL:SEND:LOCK:"+email;
@@ -109,6 +115,12 @@ public class SysUserServiceImpl implements SysUserService {
     @Override
     public Result sendPhoneCode(String phone) {
         if (ValidateUtils.phoneValidate(phone)){
+            boolean success = redisTokenBucketLimiter.tryAcquireByIp(IpUtils.getClientIp(request), 10, 1);
+
+            if (!success){
+                throw new BusinessException("发送验证码过于频繁");
+            }
+
             String code = CodeUtils.getSixDigitCode();
             String codeKey = "SMS:LOCK:" + phone;
             String sendLock = "SMS:SEND:LOCK:"+phone;
@@ -184,11 +196,11 @@ public class SysUserServiceImpl implements SysUserService {
 
         if (user == null || user.getDeleted() == 1)
         {
-            throw new AuthException("该用户不存在");
+            throw new AuthException("手机号或密码错误");
         } else if (user.getRole() != 1 ) {
             throw new AuthException("此入口使用户登录入口");
         } else if (!BCrypt.checkpw(doLogin.getPassword(),user.getPassword())) {
-            throw new AuthException("密码错误");
+            throw new AuthException("手机号或密码错误");
         }else {
 
             if (user.getStatus() == 0){

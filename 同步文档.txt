@@ -78,9 +78,9 @@ uuid
 |------|------|------|----------|
 | 1 | `SysUserServiceImpl.java` | `doLogin()` | 添加 IP 限流，容量5，速率2/s | ok
 | 2 | `SysAdminServiceImpl.java` | `adminLogin()` | 添加 IP 限流，容量5，速率2/s | ok
-| 3 | `SysUserServiceImpl.java` | `sendPhoneCode()` | 添加双重限流（IP + 手机号） |
-| 4 | `SysUserServiceImpl.java` | `sendEmailCode()` | 添加双重限流（IP + 邮箱） |
-| 5 | 登录相关 | 错误信息 | 统一改为"手机号或密码错误"，防用户枚举 |
+| 3 | `SysUserServiceImpl.java` | `sendPhoneCode()` | 添加双重限流（IP + 手机号） |ok
+| 4 | `SysUserServiceImpl.java` | `sendEmailCode()` | 添加双重限流（IP + 邮箱） |ok
+| 5 | 登录相关 | 错误信息 | 统一改为"手机号或密码错误"，防用户枚举 |ok
 
 ---
 
@@ -88,13 +88,13 @@ uuid
 
 | 序号 | 文件 | 方法 | 限流方式 | 参数 |
 |------|------|------|----------|------|
-| 6 | `PostController.java` | `sendPost()` | 用户限流 | 容量5，速率0.05/s |
-| 7 | `CommentController.java` | `sendComment()` | 用户限流 | 容量5，速率0.1/s |
-| 8 | `PostController.java` | `updateLikeCount()` | 用户限流 | 容量3，速率2/s |
-| 9 | `CommentController.java` | `updateLikeCount()` | 用户限流 | 容量3，速率2/s |
-| 10 | `ReportController.java` | `sendReport()` | 用户限流 | 容量5，速率0.0014/s |
-| 11 | `FeedbackController.java` | `sendFeedback()` | 用户限流 | 容量3，速率0.00028/s |
-| 12 | `UserController.java` | `doRegister()` | IP 限流 | 容量3，速率0.05/s |
+| 6 | `PostController.java` | `sendPost()` | 用户限流 | 容量5，速率1/s |
+| 7 | `CommentController.java` | `sendComment()` | 用户限流 | 容量5，速率1/s |
+| 8 | `PostController.java` | `updateLikeCount()` | 用户限流 | 容量10，速率1/s |
+| 9 | `CommentController.java` | `updateLikeCount()` | 用户限流 | 容量10，速率1/s |
+| 10 | `ReportController.java` | `sendReport()` | 用户限流 | 容量3，速率1/s |
+| 11 | `FeedbackController.java` | `sendFeedback()` | 用户限流 | 容量3，速率1/s |
+| 12 | `UserController.java` | `doRegister()` | IP 限流 | 容量3，速率0.1/s |
 
 ---
 

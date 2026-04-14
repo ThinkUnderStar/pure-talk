@@ -62,11 +62,11 @@ public class SysAdminServiceImpl implements SysAdminService {
         User user = userService.getOne(new QueryWrapper<User>().eq("phone", doLogin.getPhone()));
 
         if (user == null || user.getDeleted() == 1){
-            throw new BusinessException("账号不存在");
+            throw new BusinessException("手机号或密码错误");
         } else if (user.getRole() == 1) {
             throw new BusinessException("此入口是管理员登录入口");
         }else if (!BCrypt.checkpw(doLogin.getPassword(),user.getPassword())) {
-            throw new AuthException("密码错误");
+            throw new AuthException("手机号或密码错误");
         }
 
         StpUtil.login(user.getId(),doLogin.isRemember());
