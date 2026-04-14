@@ -4,7 +4,9 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import thinkunderstar.puretalk.puretalkbackend.common.*;
 import thinkunderstar.puretalk.puretalkbackend.entity.User;
@@ -27,12 +29,17 @@ public class SysUserServiceImpl implements SysUserService {
     private final UserService userService;
     private final RedisUtils redisUtils;
     private final SysAdminService sysAdminService;
+    private final RedisTokenBucketLimiter redisTokenBucketLimiter;
 
-    public SysUserServiceImpl(UserService userService, RedisUtils redisUtils, SysAdminService sysAdminService) {
+    public SysUserServiceImpl(UserService userService, RedisUtils redisUtils, SysAdminService sysAdminService, RedisTokenBucketLimiter redisTokenBucketLimiter) {
         this.userService = userService;
         this.redisUtils = redisUtils;
         this.sysAdminService = sysAdminService;
+        this.redisTokenBucketLimiter = redisTokenBucketLimiter;
     }
+
+    @Autowired
+    private HttpServletRequest request;  // Spring 自动注入当前请求的代理对象
 
     /**
      * 发送邮箱验证码
@@ -158,6 +165,21 @@ public class SysUserServiceImpl implements SysUserService {
      */
     @Override
     public Result doLogin(DoLogin doLogin) {
+        //不计入限速
+        if (doLogin.getPhone() == null || doLogin.getPhone().isEmpty()) {
+            throw new BusinessException("手机号不能为空");
+        }
+        if (doLogin.getPassword() == null || doLogin.getPassword().isEmpty()) {
+            throw new BusinessException("密码不能为空");
+        }
+
+        //给ip地址限速
+        boolean success = redisTokenBucketLimiter.tryAcquireByIp(IpUtils.getClientIp(request),5,2);
+
+        if (!success){
+            throw new BusinessException("登陆过于频繁");
+        }
+
         User user = userService.getOne(new QueryWrapper<User>().eq("phone", doLogin.getPhone()));
 
         if (user == null || user.getDeleted() == 1)

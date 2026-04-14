@@ -68,3 +68,93 @@ ADD COLUMN update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIME
 
 uuid
 
+---------------------------------------------------------------------------------------------------------------------------------
+
+---
+
+## 一、安全优化（高优先级）
+
+| 序号 | 文件 | 方法 | 优化内容 |
+|------|------|------|----------|
+| 1 | `SysUserServiceImpl.java` | `doLogin()` | 添加 IP 限流，容量5，速率2/s | ok
+| 2 | `SysAdminServiceImpl.java` | `adminLogin()` | 添加 IP 限流，容量5，速率2/s | ok
+| 3 | `SysUserServiceImpl.java` | `sendPhoneCode()` | 添加双重限流（IP + 手机号） |
+| 4 | `SysUserServiceImpl.java` | `sendEmailCode()` | 添加双重限流（IP + 邮箱） |
+| 5 | 登录相关 | 错误信息 | 统一改为"手机号或密码错误"，防用户枚举 |
+
+---
+
+## 二、接口限流优化（中优先级）
+
+| 序号 | 文件 | 方法 | 限流方式 | 参数 |
+|------|------|------|----------|------|
+| 6 | `PostController.java` | `sendPost()` | 用户限流 | 容量5，速率0.05/s |
+| 7 | `CommentController.java` | `sendComment()` | 用户限流 | 容量5，速率0.1/s |
+| 8 | `PostController.java` | `updateLikeCount()` | 用户限流 | 容量3，速率2/s |
+| 9 | `CommentController.java` | `updateLikeCount()` | 用户限流 | 容量3，速率2/s |
+| 10 | `ReportController.java` | `sendReport()` | 用户限流 | 容量5，速率0.0014/s |
+| 11 | `FeedbackController.java` | `sendFeedback()` | 用户限流 | 容量3，速率0.00028/s |
+| 12 | `UserController.java` | `doRegister()` | IP 限流 | 容量3，速率0.05/s |
+
+---
+
+## 三、性能优化（中优先级）
+
+| 序号 | 文件 | 方法 | 优化内容 |
+|------|------|------|----------|
+| 13 | `SysPostServiceImpl.java` | `updateLikeCount()` | 点赞先写 Redis，定时批量入库 |
+| 14 | `SysCommentServiceImpl.java` | `updateLikeCount()` | 点赞先写 Redis，定时批量入库 |
+| 15 | `SysPostServiceImpl.java` | `updateViewCount()` | 浏览量 Redis 暂存，定时批量入库 |
+| 16 | `SysPostServiceImpl.java` | `getPosts()` | 添加 Redis 缓存，TTL 5分钟 |
+| 17 | `SysCommentServiceImpl.java` | `getComments()` | 添加 Redis 缓存，TTL 3分钟 |
+
+---
+
+## 四、代码质量优化（低优先级）
+
+| 序号 | 文件 | 优化内容 |
+|------|------|----------|
+| 18 | `SysPostServiceImpl.java` | 魔法值 `0,1,2` 改为 `CategoryType` 枚举 |
+| 19 | `SysReportServiceImpl.java` | 魔法值 `1,2` 改为 `ReportType` 枚举 |
+| 20 | `StpInterfaceImpl.java` | 魔法值 `1,2,3` 改为 `RoleType` 枚举 |
+| 21 | `SysUserServiceImpl.java` | `doDelete()` 与 `SysAdminServiceImpl.doDelete()` 重复代码抽取 |
+
+---
+
+## 五、需要新建的文件
+
+| 序号 | 文件 | 作用 |
+|------|------|------|
+| 22 | `annotation/RateLimit.java` | 限流注解 |
+| 23 | `aspect/RateLimitAspect.java` | 限流切面 |
+| 24 | `util/IpUtils.java` | IP 获取工具类（已有，确认可用） |
+
+---
+
+## 六、优化优先级排序
+
+| 优先级 | 序号 | 预期效果 |
+|--------|------|----------|
+| 🔴 最高 | 1, 2, 3, 4 | 防暴力破解、防短信轰炸 |
+| 🟡 高 | 5 | 防用户枚举，提升安全性 |
+| 🟡 中 | 6-12 | 防刷屏、防恶意提交 |
+| 🟢 低 | 13-17 | 降低数据库压力，提升响应速度 |
+| ⚪ 最低 | 18-21 | 代码可读性、可维护性 |
+
+---
+
+## 七、限流参数速查
+
+| 接口 | 限流维度 | capacity | rate | 实际限制 |
+|------|----------|----------|------|----------|
+| 登录 | IP | 5 | 2/s | 每秒2次 |
+| 验证码 | IP + 手机 | 5/3 | 0.017/s | 每分钟1次 |
+| 注册 | IP | 3 | 0.05/s | 每分钟3次 |
+| 发帖 | 用户 | 5 | 0.05/s | 每分钟3篇 |
+| 评论 | 用户 | 5 | 0.1/s | 每10秒1条 |
+| 点赞 | 用户 | 3 | 2/s | 每秒2次 |
+| 举报 | 用户 | 5 | 0.0014/s | 每小时5次 |
+| 反馈 | 用户 | 3 | 0.00028/s | 每小时1次 |
+
+---
+

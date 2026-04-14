@@ -2,7 +2,9 @@ package thinkunderstar.puretalk.puretalkbackend.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import thinkunderstar.puretalk.puretalkbackend.common.BanUser;
 import thinkunderstar.puretalk.puretalkbackend.common.DoLogin;
@@ -14,22 +16,47 @@ import thinkunderstar.puretalk.puretalkbackend.exception.BusinessException;
 import thinkunderstar.puretalk.puretalkbackend.service.SysAdminService;
 import thinkunderstar.puretalk.puretalkbackend.service.UserService;
 import thinkunderstar.puretalk.puretalkbackend.util.DesensitizeUtils;
+import thinkunderstar.puretalk.puretalkbackend.util.IpUtils;
+import thinkunderstar.puretalk.puretalkbackend.util.RedisTokenBucketLimiter;
 import thinkunderstar.puretalk.puretalkbackend.util.ValidateUtils;
 
+import java.net.http.HttpRequest;
 import java.time.LocalDateTime;
 
 @Service
 public class SysAdminServiceImpl implements SysAdminService {
     private final UserService userService;
+    private final RedisTokenBucketLimiter redisTokenBucketLimiter;
 
-    public SysAdminServiceImpl(UserService userService) {
+    public SysAdminServiceImpl(UserService userService, RedisTokenBucketLimiter redisTokenBucketLimiter) {
         this.userService = userService;
+        this.redisTokenBucketLimiter = redisTokenBucketLimiter;
     }
+
+    @Autowired
+    private HttpServletRequest request;
 
     @Override
     public Result adminLogin(DoLogin doLogin) {
+
+        //不计入限速
+        if (doLogin.getPhone() == null || doLogin.getPhone().isEmpty()) {
+            throw new BusinessException("手机号不能为空");
+        }
+
+        if (doLogin.getPassword() == null || doLogin.getPassword().isEmpty()) {
+            throw new BusinessException("密码不能为空");
+        }
+
         if (!ValidateUtils.phoneValidate(doLogin.getPhone())){
             throw new BusinessException("手机号格式有误");
+        }
+
+        //给ip地址限速
+        boolean success = redisTokenBucketLimiter.tryAcquireByIp(IpUtils.getClientIp(request),5,2);
+
+        if (!success){
+            throw new BusinessException("登陆过于频繁");
         }
 
         User user = userService.getOne(new QueryWrapper<User>().eq("phone", doLogin.getPhone()));
