@@ -5,19 +5,30 @@
       <div class="header-actions">
         <router-link to="/login" v-if="!isLoggedIn" class="btn">登录</router-link>
         <router-link to="/register" v-if="!isLoggedIn" class="btn">注册</router-link>
-        <router-link to="/user/profile" v-else class="btn">个人中心</router-link>
+        <router-link to="/user/profile" v-else-if="userType === 'user'" class="btn">个人中心</router-link>
+        <router-link to="/admin" v-else-if="userType === 'admin'" class="btn">管理中心</router-link>
       </div>
     </header>
     
     <main class="main">
       <div class="category-tabs">
         <button 
-          v-for="category in categories" 
-          :key="category.id"
-          :class="['tab', { active: currentCategory === category.id }]"
-          @click="switchCategory(category.id)"
+          :class="['tab', { active: currentCategory === 'all' }]"
+          @click="switchCategory('all')"
         >
-          {{ category.name }}
+          综合
+        </button>
+        <button 
+          :class="['tab', { active: currentCategory === 'hot' }]"
+          @click="switchCategory('hot')"
+        >
+          最热
+        </button>
+        <button 
+          :class="['tab', { active: currentCategory === 'latest' }]"
+          @click="switchCategory('latest')"
+        >
+          最新
         </button>
       </div>
       
@@ -72,26 +83,29 @@ import { debounce } from '@/utils/debounce'
 const router = useRouter()
 const postListRef = ref<HTMLElement | null>(null)
 const posts = ref<Post[]>([])
-const currentCategory = ref<number>(0)
+const currentCategory = ref<string>('all')
 const currentPage = ref<number>(1)
 const loading = ref<boolean>(false)
 const hasMore = ref<boolean>(true)
 const isLoggedIn = ref<boolean>(!!localStorage.getItem('token'))
-
-const categories = [
-  { id: 0, name: '全部' },
-  { id: 1, name: '技术' },
-  { id: 2, name: '生活' },
-  { id: 3, name: '娱乐' },
-  { id: 4, name: '其他' }
-]
+const userType = ref<string>(localStorage.getItem('userType') || 'user')
 
 const loadPosts = async () => {
   if (loading.value) return
   
   loading.value = true
   try {
-    const response = await postApi.getPosts(currentCategory.value, currentPage.value, 20)
+    let response
+    if (currentCategory.value === 'all') {
+      response = await postApi.getPosts(0, currentPage.value, 20)
+    } else if (currentCategory.value === 'hot') {
+      // 这里应该调用获取最热帖子的接口，但是后端没有提供，所以我们暂时使用getPosts接口
+      response = await postApi.getPosts(0, currentPage.value, 20)
+    } else if (currentCategory.value === 'latest') {
+      // 这里应该调用获取最新帖子的接口，但是后端没有提供，所以我们暂时使用getPosts接口
+      response = await postApi.getPosts(0, currentPage.value, 20)
+    }
+    
     const data = response as any
     if (data.code === 200) {
       const newPosts = data.data?.list || []
@@ -106,8 +120,8 @@ const loadPosts = async () => {
   }
 }
 
-const switchCategory = (categoryId: number) => {
-  currentCategory.value = categoryId
+const switchCategory = (category: string) => {
+  currentCategory.value = category
   currentPage.value = 1
   posts.value = []
   hasMore.value = true

@@ -129,18 +129,34 @@ const sendPhoneCode = debounce(async () => {
     return
   }
   
+  // 验证手机号格式
+  const phoneRegex = /^1[3-9]\d{9}$/
+  if (!phoneRegex.test(form.value.phone)) {
+    alert('手机号格式不正确')
+    return
+  }
+  
   try {
+    console.log('发送手机验证码请求:', form.value.phone)
     const response = await userApi.sendRegisterPhoneCode(form.value.phone)
+    console.log('发送手机验证码响应:', response)
     const data = response as any
     if (data.code === 200) {
       alert('验证码已发送')
       startCountdown('phone')
     } else {
+      console.error('发送验证码失败:', data)
       alert(data.message || '发送失败')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('发送验证码失败:', error)
-    alert('发送验证码失败')
+    if (error.message) {
+      alert('发送验证码失败: ' + error.message)
+    } else if (error.msg) {
+      alert('发送验证码失败: ' + error.msg)
+    } else {
+      alert('发送验证码失败: 服务端错误，请稍后重试')
+    }
   }
 }, 1000)
 
@@ -150,18 +166,34 @@ const sendEmailCode = debounce(async () => {
     return
   }
   
+  // 验证邮箱格式
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(form.value.email)) {
+    alert('邮箱格式不正确')
+    return
+  }
+  
   try {
+    console.log('发送邮箱验证码请求:', form.value.email)
     const response = await userApi.sendRegisterEmailCode(form.value.email)
+    console.log('发送邮箱验证码响应:', response)
     const data = response as any
     if (data.code === 200) {
       alert('验证码已发送')
       startCountdown('email')
     } else {
+      console.error('发送验证码失败:', data)
       alert(data.message || '发送失败')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('发送验证码失败:', error)
-    alert('发送验证码失败')
+    if (error.message) {
+      alert('发送验证码失败: ' + error.message)
+    } else if (error.msg) {
+      alert('发送验证码失败: ' + error.msg)
+    } else {
+      alert('发送验证码失败: 服务端错误，请稍后重试')
+    }
   }
 }, 1000)
 
@@ -181,7 +213,7 @@ const handleSubmit = async () => {
   try {
     const phoneCodeResponse = await userApi.validatePhoneCode({
       phone: form.value.phone,
-      code: form.value.phoneCode
+      phoneCode: form.value.phoneCode
     })
     const phoneData = phoneCodeResponse as any
     if (phoneData.code !== 200) {
@@ -192,7 +224,7 @@ const handleSubmit = async () => {
     // 再验证邮箱验证码
     const emailCodeResponse = await userApi.validateEmailCode({
       email: form.value.email,
-      code: form.value.emailCode
+      emailCode: form.value.emailCode
     })
     const emailData = emailCodeResponse as any
     if (emailData.code !== 200) {

@@ -21,7 +21,9 @@ export interface DoUpdate {
 
 export interface ValidateCode {
   phone: string
-  code: string
+  phoneCode: string
+  email?: string
+  emailCode?: string
   remember?: boolean
 }
 
@@ -46,6 +48,8 @@ export const userApi = {
   sendLoginCode: (phone: string) => axios.get<Result>('/user/login/code', { params: { phone } }),
   // 验证码登录
   loginWithCode: (data: ValidateCode) => axios.post<Result<LoginReturnData>>('/user/login/code', data),
+  // 管理员登录
+  adminLogin: (data: DoLogin) => axios.post<Result<LoginReturnData>>('/admin/login', data),
   // 注册
   register: (data: DoRegister) => axios.post<Result>('/user/register', data),
   // 发送手机验证码（注册用）
@@ -55,7 +59,7 @@ export const userApi = {
   // 发送邮箱验证码（注册用）
   sendRegisterEmailCode: (email: string) => axios.get<Result>('/user/register/email', { params: { email } }),
   // 验证邮箱验证码
-  validateEmailCode: (data: { email: string; code: string }) => axios.post<Result>('/user/register/email', data),
+  validateEmailCode: (data: { email: string; emailCode: string }) => axios.post<Result>('/user/register/email', data),
   // 删除账户
   deleteAccount: () => axios.delete<Result>('/user/delete'),
   // 登出
