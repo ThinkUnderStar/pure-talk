@@ -2,7 +2,7 @@ package thinkunderstar.puretalk.puretalkbackend.util;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -57,11 +57,27 @@ public class RedisTokenBucketLimiter {
                     "redis.call('expire', key, math.ceil(capacity / rate) + 10) " +
                     "return allowed and 1 or 0";
 
-    private final DefaultRedisScript<Long> script;
+    /**
+     * 自定义 RedisScript 实现，强制每次执行使用 EVAL 而不是 EVALSHA，
+     * 彻底解决因 Redis 脚本缓存残留导致的 "now is nil" 错误。
+     */
+    private final RedisScript<Long> script = new RedisScript<Long>() {
+        @Override
+        public String getSha1() {
+            // 返回 null 时 Spring Data Redis 会直接发送 EVAL 命令
+            return null;
+        }
 
-    public RedisTokenBucketLimiter() {
-        this.script = new DefaultRedisScript<>(TOKEN_BUCKET_SCRIPT, Long.class);
-    }
+        @Override
+        public Class<Long> getResultType() {
+            return Long.class;
+        }
+
+        @Override
+        public String getScriptAsString() {
+            return TOKEN_BUCKET_SCRIPT;
+        }
+    };
 
     /**
      * 按用户限流（每个用户独立计数）
