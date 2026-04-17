@@ -18,25 +18,25 @@ public class StpInterfaceImpl implements StpInterface {
     }
 
     @Override
-    public List<String> getPermissionList(Object o, String s) {
-        User user = userService.getById((Long) o);
-
+    public List<String> getPermissionList(Object loginId, String loginType) {
+        Long userId = Long.valueOf(loginId.toString());  // 安全转换
+        User user = userService.getById(userId);
         List<String> permissionList = new ArrayList<>();
-
-        if (user.getStatus() == 1){
+        if (user != null && user.getStatus() == 1) {
             permissionList.add("send:add");
         }
-
         return permissionList;
     }
 
     @Override
-    public List<String> getRoleList(Object o, String s) {
-        User user = userService.getById((Long) o);
-
+    public List<String> getRoleList(Object loginId, String loginType) {
+        Long userId = Long.valueOf(loginId.toString());  // 安全转换
+        User user = userService.getById(userId);
         List<String> roleList = new ArrayList<>();
-
-        if (user.getRole() == 1){
+        if (user == null) {
+            return roleList;
+        }
+        if (user.getRole() == 1) {
             roleList.add("user");
         } else if (user.getRole() == 2) {
             roleList.add("admin");
@@ -45,7 +45,6 @@ public class StpInterfaceImpl implements StpInterface {
         } else {
             throw new BusinessException("非法身份");
         }
-
         return roleList;
     }
 }

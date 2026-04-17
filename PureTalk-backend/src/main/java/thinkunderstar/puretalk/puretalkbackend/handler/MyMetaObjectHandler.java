@@ -14,7 +14,13 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
     @Override
     public void insertFill(MetaObject metaObject) {
         log.info("开始插入填充...");
-        this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+
+        // 1. 填充创建时间
+        this.strictInsertFill(metaObject, "createTime", LocalDateTime.class, now);
+
+        // 2. 必须同时填充更新时间，否则乐观锁会因为 NULL 而报错！
+        this.strictInsertFill(metaObject, "updateTime", LocalDateTime.class, now);
     }
 
     @Override

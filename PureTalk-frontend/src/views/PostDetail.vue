@@ -123,7 +123,7 @@ const loadPost = async () => {
     const response = await postApi.getPosts(0, 1, 100)
     const data = response as any
     if (data.code === 200) {
-      post.value = data.data?.list.find((p: Post) => p.id === postId.value) || null
+      post.value = data.data?.records.find((p: Post) => p.id === postId.value) || null
       if (post.value) {
         // 更新浏览量
         await postApi.updateViewCount({ [postId.value]: 1 })
@@ -144,7 +144,7 @@ const loadComments = async () => {
     const response = await commentApi.getComments(postId.value, currentCommentPage.value, 20)
     const data = response as any
     if (data.code === 200) {
-      const newComments = data.data?.list || []
+      const newComments = data.data?.records || []
       comments.value = currentCommentPage.value === 1 ? newComments : [...comments.value, ...newComments]
       hasMoreComments.value = newComments.length === 20
       currentCommentPage.value++
@@ -202,9 +202,11 @@ const submitComment = async () => {
   
   submittingComment.value = true
   try {
+    const userId = localStorage.getItem('userId') || '1'
     const response = await commentApi.sendComment({
       postId: postId.value,
-      content: commentContent.value
+      content: commentContent.value,
+      userId: Number(userId)
     })
     const data = response as any
     if (data.code === 200) {
@@ -214,9 +216,16 @@ const submitComment = async () => {
       comments.value = []
       hasMoreComments.value = true
       loadComments()
+    } else {
+      alert(data.msg || '评论失败')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('提交评论失败:', error)
+    if (error.msg) {
+      alert('评论失败: ' + error.msg)
+    } else {
+      alert('评论失败，请稍后重试')
+    }
   } finally {
     submittingComment.value = false
   }

@@ -4,7 +4,7 @@ import { Result } from './user'
 export interface DoSendPost {
   title: string
   content: string
-  categoryId: number
+  userId: number
 }
 
 export interface Post {
@@ -13,17 +13,24 @@ export interface Post {
   content: string
   userId: number
   username: string
-  categoryId: number
   likeCount: number
   viewCount: number
   commentCount: number
   createTime: string
 }
 
+export interface PostPageResult {
+  records: Post[]
+  total: number
+  current: number
+  pages: number
+  size: number
+}
+
 export const postApi = {
   // 获取帖子列表
   getPosts: (categoryId: number = 0, page: number = 1, size: number = 20) => 
-    axios.get<Result<{ list: Post[]; total: number }>>('/post', { params: { categoryId, page, size } }),
+    axios.get<Result<PostPageResult>>('/post', { params: { categoryId, page, size } }),
   // 发送帖子
   sendPost: (data: DoSendPost) => axios.post<Result>('/post/send', data),
   // 删除自己的帖子

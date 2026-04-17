@@ -3,6 +3,7 @@
     <header class="header">
       <h1>PureTalk</h1>
       <div class="header-actions">
+        <button v-if="isLoggedIn" class="btn primary-btn" @click="showPostModal = true">发布帖子</button>
         <router-link to="/login" v-if="!isLoggedIn" class="btn">登录</router-link>
         <router-link to="/register" v-if="!isLoggedIn" class="btn">注册</router-link>
         <router-link to="/user/profile" v-else-if="userType === 'user'" class="btn">个人中心</router-link>
@@ -71,6 +72,46 @@
         </div>
       </div>
     </main>
+    
+    <!-- 发布帖子模态框 -->
+    <div v-if="showPostModal" class="modal-overlay" @click="closePostModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h2>发布帖子</h2>
+          <button class="close-btn" @click="closePostModal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="submitPost">
+            <div class="form-group">
+              <label for="post-title">标题</label>
+              <input 
+                type="text" 
+                id="post-title" 
+                v-model="postForm.title" 
+                placeholder="请输入帖子标题"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="post-content">内容</label>
+              <textarea 
+                id="post-content" 
+                v-model="postForm.content" 
+                placeholder="请输入帖子内容"
+                rows="6"
+                required
+              ></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn" @click="closePostModal">取消</button>
+              <button type="submit" class="btn primary-btn" :disabled="submittingPost">
+                {{ submittingPost ? '发布中...' : '发布' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -89,6 +130,12 @@ const loading = ref<boolean>(false)
 const hasMore = ref<boolean>(true)
 const isLoggedIn = ref<boolean>(!!localStorage.getItem('token'))
 const userType = ref<string>(localStorage.getItem('userType') || 'user')
+const showPostModal = ref<boolean>(false)
+const submittingPost = ref<boolean>(false)
+const postForm = ref({
+  title: '',
+  content: ''
+})
 
 const loadPosts = async () => {
   if (loading.value) return
@@ -108,7 +155,7 @@ const loadPosts = async () => {
     
     const data = response as any
     if (data.code === 200) {
-      const newPosts = data.data?.list || []
+      const newPosts = data.data?.records || []
       posts.value = currentPage.value === 1 ? newPosts : [...posts.value, ...newPosts]
       hasMore.value = newPosts.length === 20
       currentPage.value++
@@ -144,6 +191,57 @@ const handleScroll = debounce(() => {
     loadPosts()
   }
 }, 200)
+
+const closePostModal = () => {
+  showPostModal.value = false
+  // 重置表单
+  postForm.value = {
+    title: '',
+    content: ''
+  }
+  submittingPost.value = false
+}
+
+const submitPost = async () => {
+  if (!postForm.value.title.trim() || !postForm.value.content.trim()) {
+    alert('请填写标题和内容')
+    return
+  }
+  
+  submittingPost.value = true
+  try {
+    // 获取当前用户 ID（这里需要从本地存储或用户信息中获取）
+    // 假设我们已经存储了用户 ID
+    const userId = localStorage.getItem('userId') || '1'
+    
+    const response = await postApi.sendPost({
+      title: postForm.value.title,
+      content: postForm.value.content,
+      userId: Number(userId)
+    })
+    const data = response as any
+    if (data.code === 200) {
+      alert('发布成功')
+      closePostModal()
+      // 重新加载帖子列表
+      currentPage.value = 1
+      posts.value = []
+      hasMore.value = true
+      loadPosts()
+    } else {
+      alert(data.msg || '发布失败')
+    }
+  } catch (error: any) {
+    console.error('发布帖子失败:', error)
+    if (error.msg) {
+      alert('发布失败: ' + error.msg)
+    } else {
+      alert('发布失败，请稍后重试')
+    }
+  } finally {
+    submittingPost.value = false
+  }
+}
 
 onMounted(() => {
   loadPosts()
@@ -190,6 +288,18 @@ onMounted(() => {
 .btn:hover {
   background-color: #f5f5f5;
   border-color: #ccc;
+}
+
+.primary-btn {
+  background-color: #4CAF50;
+  color: #fff;
+  border-color: #4CAF50;
+}
+
+.primary-btn:hover {
+  background-color: #45a049;
+  border-color: #45a049;
+  color: #fff;
 }
 
 .main {
@@ -333,6 +443,111 @@ onMounted(() => {
   font-size: 0.9rem;
 }
 
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2 {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4CAF50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}
+
 @media (max-width: 768px) {
   .header {
     padding: 1rem;
@@ -349,6 +564,19 @@ onMounted(() => {
   
   .post-item {
     padding: 1rem;
+  }
+  
+  .modal-content {
+    width: 95%;
+    margin: 1rem;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions button {
+    width: 100%;
   }
 }
 </style>

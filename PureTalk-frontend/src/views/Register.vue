@@ -38,13 +38,26 @@
         
         <div class="form-group">
           <label for="phoneCode">手机验证码</label>
-          <input 
-            type="text" 
-            id="phoneCode" 
-            v-model="form.phoneCode" 
-            placeholder="请输入手机验证码"
-            required
-          />
+          <div class="code-input-wrapper">
+            <input 
+              type="text" 
+              id="phoneCode" 
+              v-model="form.phoneCode" 
+              placeholder="请输入手机验证码"
+              required
+            />
+            <button 
+              type="button" 
+              class="verify-code-btn"
+              :disabled="!form.phone || !form.phoneCode"
+              @click="verifyPhoneCode"
+            >
+              验证
+            </button>
+          </div>
+          <div v-if="verification.phone" class="verification-result success">
+            {{ verification.phone }}
+          </div>
         </div>
         
         <div class="form-group">
@@ -70,13 +83,26 @@
         
         <div class="form-group">
           <label for="emailCode">邮箱验证码</label>
-          <input 
-            type="text" 
-            id="emailCode" 
-            v-model="form.emailCode" 
-            placeholder="请输入邮箱验证码"
-            required
-          />
+          <div class="code-input-wrapper">
+            <input 
+              type="text" 
+              id="emailCode" 
+              v-model="form.emailCode" 
+              placeholder="请输入邮箱验证码"
+              required
+            />
+            <button 
+              type="button" 
+              class="verify-code-btn"
+              :disabled="!form.email || !form.emailCode"
+              @click="verifyEmailCode"
+            >
+              验证
+            </button>
+          </div>
+          <div v-if="verification.email" class="verification-result success">
+            {{ verification.email }}
+          </div>
         </div>
         
         <div class="form-group">
@@ -121,6 +147,10 @@ const form = ref({
   email: '',
   emailCode: '',
   password: ''
+})
+const verification = ref({
+  phone: '',
+  email: ''
 })
 
 const sendPhoneCode = debounce(async () => {
@@ -208,48 +238,103 @@ const startCountdown = (type: 'phone' | 'email') => {
   }, 1000)
 }
 
-const handleSubmit = async () => {
-  // 先验证手机验证码
+const verifyPhoneCode = async () => {
+  if (!form.value.phone || !form.value.phoneCode) {
+    alert('请输入手机号和验证码')
+    return
+  }
+  
   try {
-    const phoneCodeResponse = await userApi.validatePhoneCode({
+    const response = await userApi.validatePhoneCode({
       phone: form.value.phone,
       phoneCode: form.value.phoneCode
     })
-    const phoneData = phoneCodeResponse as any
-    if (phoneData.code !== 200) {
-      alert('手机验证码有误')
-      return
+    const data = response as any
+    if (data.code === 200) {
+      verification.value.phone = '手机验证码验证成功'
+      alert('手机验证码验证成功')
+    } else {
+      verification.value.phone = ''
+      alert('手机验证码验证失败')
     }
-    
-    // 再验证邮箱验证码
-    const emailCodeResponse = await userApi.validateEmailCode({
+  } catch (error: any) {
+    console.error('验证手机验证码失败:', error)
+    verification.value.phone = ''
+    if (error.msg) {
+      alert('验证失败: ' + error.msg)
+    } else {
+      alert('验证失败，请稍后重试')
+    }
+  }
+}
+
+const verifyEmailCode = async () => {
+  if (!form.value.email || !form.value.emailCode) {
+    alert('请输入邮箱和验证码')
+    return
+  }
+  
+  try {
+    const response = await userApi.validateEmailCode({
       email: form.value.email,
       emailCode: form.value.emailCode
     })
-    const emailData = emailCodeResponse as any
-    if (emailData.code !== 200) {
-      alert('邮箱验证码有误')
-      return
+    const data = response as any
+    if (data.code === 200) {
+      verification.value.email = '邮箱验证码验证成功'
+      alert('邮箱验证码验证成功')
+    } else {
+      verification.value.email = ''
+      alert('邮箱验证码验证失败')
     }
-    
-    // 最后注册
+  } catch (error: any) {
+    console.error('验证邮箱验证码失败:', error)
+    verification.value.email = ''
+    if (error.msg) {
+      alert('验证失败: ' + error.msg)
+    } else {
+      alert('验证失败，请稍后重试')
+    }
+  }
+}
+
+const handleSubmit = async () => {
+  // 检查验证码是否已验证
+  if (!verification.value.phone) {
+    alert('请先验证手机验证码')
+    return
+  }
+  
+  if (!verification.value.email) {
+    alert('请先验证邮箱验证码')
+    return
+  }
+  
+  // 最后注册
+  try {
     loading.value = true
     const registerResponse = await userApi.register({
       username: form.value.username,
       password: form.value.password,
       phone: form.value.phone,
-      email: form.value.email
+      email: form.value.email,
+      rightPhone: true,
+      rightEmail: true
     })
     const registerData = registerResponse as any
     if (registerData.code === 200) {
       alert('注册成功')
       router.push('/login')
     } else {
-      alert(registerData.message || '注册失败')
+      alert(registerData.msg || '注册失败')
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('注册失败:', error)
-    alert('注册失败')
+    if (error.msg) {
+      alert('注册失败: ' + error.msg)
+    } else {
+      alert('注册失败')
+    }
   } finally {
     loading.value = false
   }
@@ -339,6 +424,42 @@ const handleSubmit = async () => {
   border-color: #e0e0e0;
   color: #999;
   cursor: not-allowed;
+}
+
+.verify-code-btn {
+  padding: 0.75rem 1rem;
+  border: 1px solid #2196F3;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #2196F3;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.verify-code-btn:hover:not(:disabled) {
+  background-color: #2196F3;
+  color: #fff;
+}
+
+.verify-code-btn:disabled {
+  border-color: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.verification-result {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.verification-result.success {
+  color: #4CAF50;
+  background-color: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
 .submit-btn {
