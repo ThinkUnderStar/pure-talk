@@ -5,6 +5,10 @@ import Register from '../views/Register.vue'
 import PostDetail from '../views/PostDetail.vue'
 import UserProfile from '../views/UserProfile.vue'
 import Admin from '../views/Admin.vue'
+import Feedback from '../views/Feedback.vue'
+import Report from '../views/Report.vue'
+import Notification from '../views/Notification.vue'
+import AdminCreate from '../views/AdminCreate.vue'
 
 const routes = [
   {
@@ -36,6 +40,26 @@ const routes = [
     path: '/admin',
     name: 'Admin',
     component: Admin
+  },
+  {
+    path: '/feedback',
+    name: 'Feedback',
+    component: Feedback
+  },
+  {
+    path: '/report',
+    name: 'Report',
+    component: Report
+  },
+  {
+    path: '/notification',
+    name: 'Notification',
+    component: Notification
+  },
+  {
+    path: '/admin/create',
+    name: 'AdminCreate',
+    component: AdminCreate
   }
 ]
 

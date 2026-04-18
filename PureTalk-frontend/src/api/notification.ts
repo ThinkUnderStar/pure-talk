@@ -8,12 +8,8 @@ export interface Notification {
   content: string
   isRead: boolean
   createTime: string
-}
-
-export interface NotificationTarget {
-  id: number
-  type: string
-  content: string
+  relatedId?: number
+  relatedType?: string
 }
 
 export interface NotificationPageResult {
@@ -26,9 +22,14 @@ export interface NotificationPageResult {
 
 export const notificationApi = {
   // 获取通知列表
-  getNotifications: (userId: number, page: number = 1, size: number = 20) => 
-    axios.get<Result<NotificationPageResult>>('/notification', { params: { userId, page, size } }),
-  // 获取通知目标
-  getNotificationTarget: (notificationId: number) => 
-    axios.get<Result<NotificationTarget>>(`/notification/${notificationId}/target`)
+  getNotifications: (page: number = 1, size: number = 20) =>
+    axios.get<Result<NotificationPageResult>>('/notification', { params: { page, size } }),
+  // 标记已读
+  markAsRead: (notificationId: number) =>
+    axios.put<Result>(`/notification/${notificationId}/read`),
+  // 全部标记已读
+  markAllAsRead: () => axios.put<Result>('/notification/read-all'),
+  // 删除通知
+  deleteNotification: (notificationId: number) =>
+    axios.delete<Result>(`/notification/${notificationId}`)
 }

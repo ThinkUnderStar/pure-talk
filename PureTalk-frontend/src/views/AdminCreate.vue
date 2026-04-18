@@ -1,11 +1,11 @@
 <template>
-  <div class="register-container">
-    <div class="register-form">
+  <div class="admin-create-container">
+    <div class="admin-create-form">
       <div class="form-header">
-        <h2>注册</h2>
-        <p class="subtitle">加入 PureTalk</p>
+        <h2>创建管理员</h2>
+        <p class="subtitle">创建新的管理员账户</p>
       </div>
-      
+
       <div class="form-tabs">
         <button
           :class="['tab', { active: currentStep === 'basic' }]"
@@ -20,9 +20,8 @@
           验证信息
         </button>
       </div>
-      
+
       <form @submit.prevent="handleSubmit">
-        <!-- 基础信息步骤 -->
         <div v-show="currentStep === 'basic'">
           <div class="form-group">
             <label for="username">用户名</label>
@@ -31,11 +30,30 @@
               id="username"
               v-model="form.username"
               placeholder="4-16位字母、数字、下划线"
-              required
             />
             <span class="input-hint">以字母开头</span>
           </div>
-          
+
+          <div class="form-group">
+            <label for="phone">手机号</label>
+            <input
+              type="tel"
+              id="phone"
+              v-model="form.phone"
+              placeholder="请输入手机号"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="email">邮箱</label>
+            <input
+              type="email"
+              id="email"
+              v-model="form.email"
+              placeholder="请输入邮箱"
+            />
+          </div>
+
           <div class="form-group">
             <label for="password">密码</label>
             <input
@@ -43,24 +61,12 @@
               id="password"
               v-model="form.password"
               placeholder="8-20位，包含字母和数字"
-              required
             />
             <span class="input-hint">至少包含一个字母和一个数字</span>
           </div>
-          
-          <div class="form-group">
-            <label for="confirmPassword">确认密码</label>
-            <input
-              type="password"
-              id="confirmPassword"
-              v-model="form.confirmPassword"
-              placeholder="再次输入密码"
-              required
-            />
-          </div>
-          
-          <button 
-            type="button" 
+
+          <button
+            type="button"
             class="submit-btn next-btn"
             @click="goToVerifyStep"
             :disabled="!isBasicInfoValid"
@@ -68,18 +74,16 @@
             下一步
           </button>
         </div>
-        
-        <!-- 验证信息步骤 -->
+
         <div v-show="currentStep === 'verify'">
           <div class="form-group">
-            <label for="phone">手机号</label>
+            <label for="phoneCode">手机验证码</label>
             <div class="code-input-wrapper">
               <input
-                type="tel"
-                id="phone"
-                v-model="form.phone"
-                placeholder="请输入手机号"
-                required
+                type="text"
+                id="phoneCode"
+                v-model="form.phoneCode"
+                placeholder="请输入手机验证码"
               />
               <button
                 type="button"
@@ -90,41 +94,19 @@
                 {{ countdown.phone > 0 ? `${countdown.phone}秒` : '获取验证码' }}
               </button>
             </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="phoneCode">手机验证码</label>
-            <div class="code-input-wrapper">
-              <input
-                type="text"
-                id="phoneCode"
-                v-model="form.phoneCode"
-                placeholder="请输入手机验证码"
-                required
-              />
-              <button
-                type="button"
-                class="verify-code-btn"
-                :disabled="!form.phone || !form.phoneCode"
-                @click="verifyPhoneCode"
-              >
-                验证
-              </button>
-            </div>
             <div v-if="verification.phone" class="verification-result success">
               ✓ {{ verification.phone }}
             </div>
           </div>
-          
+
           <div class="form-group">
-            <label for="email">邮箱</label>
+            <label for="emailCode">邮箱验证码</label>
             <div class="code-input-wrapper">
               <input
-                type="email"
-                id="email"
-                v-model="form.email"
-                placeholder="请输入邮箱"
-                required
+                type="text"
+                id="emailCode"
+                v-model="form.emailCode"
+                placeholder="请输入邮箱验证码"
               />
               <button
                 type="button"
@@ -135,32 +117,11 @@
                 {{ countdown.email > 0 ? `${countdown.email}秒` : '获取验证码' }}
               </button>
             </div>
-          </div>
-          
-          <div class="form-group">
-            <label for="emailCode">邮箱验证码</label>
-            <div class="code-input-wrapper">
-              <input
-                type="text"
-                id="emailCode"
-                v-model="form.emailCode"
-                placeholder="请输入邮箱验证码"
-                required
-              />
-              <button
-                type="button"
-                class="verify-code-btn"
-                :disabled="!form.email || !form.emailCode"
-                @click="verifyEmailCode"
-              >
-                验证
-              </button>
-            </div>
             <div v-if="verification.email" class="verification-result success">
               ✓ {{ verification.email }}
             </div>
           </div>
-          
+
           <div class="form-actions">
             <button
               type="button"
@@ -174,14 +135,13 @@
               class="submit-btn"
               :disabled="loading || !isAllVerified"
             >
-              {{ loading ? '注册中...' : '注册' }}
+              {{ loading ? '创建中...' : '创建管理员' }}
             </button>
           </div>
         </div>
-        
+
         <div class="form-footer">
-          <span>已有账号？</span>
-          <router-link to="/login" class="link">立即登录</router-link>
+          <button class="link" @click="goBackToAdmin">返回管理中心</button>
         </div>
       </form>
     </div>
@@ -191,11 +151,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { userApi } from '@/api/user'
+import { rootApi } from '@/api/user'
 import { debounce } from '@/utils/debounce'
 
 const router = useRouter()
-const loading = ref<boolean>(false)
+const loading = ref(false)
 const currentStep = ref<'basic' | 'verify'>('basic')
 const countdown = ref({
   phone: 0,
@@ -204,11 +164,10 @@ const countdown = ref({
 const form = ref({
   username: '',
   phone: '',
-  phoneCode: '',
   email: '',
-  emailCode: '',
   password: '',
-  confirmPassword: ''
+  phoneCode: '',
+  emailCode: ''
 })
 const verification = ref({
   phone: '',
@@ -218,10 +177,14 @@ const verification = ref({
 const isBasicInfoValid = computed(() => {
   const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{3,15}$/
   const passwordRegex = /^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z!@#$%^&*_\-]{8,20}$/
+  const phoneRegex = /^1[3-9]\d{9}$/
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
   return (
     usernameRegex.test(form.value.username) &&
     passwordRegex.test(form.value.password) &&
-    form.value.password === form.value.confirmPassword
+    phoneRegex.test(form.value.phone) &&
+    emailRegex.test(form.value.email)
   )
 })
 
@@ -243,9 +206,9 @@ const sendPhoneCode = debounce(async () => {
     alert('手机号格式不正确')
     return
   }
-  
+
   try {
-    const response = await userApi.sendRegisterPhoneCode(form.value.phone)
+    const response = await rootApi.sendPhoneCode(form.value.phone)
     const data = response as any
     if (data.code === 200) {
       alert('验证码已发送')
@@ -265,9 +228,9 @@ const sendEmailCode = debounce(async () => {
     alert('邮箱格式不正确')
     return
   }
-  
+
   try {
-    const response = await userApi.sendRegisterEmailCode(form.value.email)
+    const response = await rootApi.sendEmailCode(form.value.email)
     const data = response as any
     if (data.code === 200) {
       alert('验证码已发送')
@@ -292,44 +255,8 @@ const startCountdown = (type: 'phone' | 'email') => {
   }, 1000)
 }
 
-const verifyPhoneCode = async () => {
-  try {
-    const response = await userApi.validatePhoneCode({
-      phone: form.value.phone,
-      phoneCode: form.value.phoneCode
-    })
-    const data = response as any
-    if (data.code === 200) {
-      verification.value.phone = '手机验证成功'
-    } else {
-      verification.value.phone = ''
-      alert('手机验证码错误')
-    }
-  } catch (error: any) {
-    console.error('验证失败:', error)
-    verification.value.phone = ''
-    alert(error.msg || '验证失败')
-  }
-}
-
-const verifyEmailCode = async () => {
-  try {
-    const response = await userApi.validateEmailCode({
-      email: form.value.email,
-      emailCode: form.value.emailCode
-    })
-    const data = response as any
-    if (data.code === 200) {
-      verification.value.email = '邮箱验证成功'
-    } else {
-      verification.value.email = ''
-      alert('邮箱验证码错误')
-    }
-  } catch (error: any) {
-    console.error('验证失败:', error)
-    verification.value.email = ''
-    alert(error.msg || '验证失败')
-  }
+const goBackToAdmin = () => {
+  router.replace('/admin')
 }
 
 const handleSubmit = async () => {
@@ -337,15 +264,15 @@ const handleSubmit = async () => {
     alert('请先验证手机验证码')
     return
   }
-  
+
   if (!verification.value.email) {
     alert('请先验证邮箱验证码')
     return
   }
-  
+
   try {
     loading.value = true
-    const response = await userApi.register({
+    const response = await rootApi.createAdmin({
       username: form.value.username,
       password: form.value.password,
       phone: form.value.phone,
@@ -355,14 +282,14 @@ const handleSubmit = async () => {
     })
     const data = response as any
     if (data.code === 200) {
-      alert('注册成功')
-      router.push('/login')
+      alert('管理员创建成功')
+      router.push('/admin')
     } else {
-      alert(data.msg || '注册失败')
+      alert(data.msg || '创建失败')
     }
   } catch (error: any) {
-    console.error('注册失败:', error)
-    alert(error.msg || '注册失败')
+    console.error('创建管理员失败:', error)
+    alert(error.msg || '创建失败')
   } finally {
     loading.value = false
   }
@@ -370,20 +297,20 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-.register-container {
+.admin-create-container {
   min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
   padding: 2rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.register-form {
+.admin-create-form {
   background-color: #fff;
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   padding: 2.5rem;
   width: 100%;
   max-width: 450px;
@@ -415,7 +342,7 @@ const handleSubmit = async () => {
 }
 
 .subtitle {
-  color: #999;
+  color: #666;
   font-size: 0.9rem;
   margin: 0;
 }
@@ -440,12 +367,12 @@ const handleSubmit = async () => {
 }
 
 .tab:hover {
-  color: #667eea;
+  color: #e94560;
 }
 
 .tab.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: #e94560;
+  border-bottom-color: #e94560;
   font-weight: 600;
 }
 
@@ -475,8 +402,8 @@ const handleSubmit = async () => {
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #e94560;
+  box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.1);
   background-color: #fff;
 }
 
@@ -498,10 +425,10 @@ const handleSubmit = async () => {
 
 .send-code-btn {
   padding: 0.9rem 1.2rem;
-  border: 1px solid #667eea;
+  border: 1px solid #e94560;
   border-radius: 8px;
   background-color: #fff;
-  color: #667eea;
+  color: #e94560;
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -510,41 +437,13 @@ const handleSubmit = async () => {
 }
 
 .send-code-btn:hover:not(:disabled) {
-  background-color: #667eea;
+  background-color: #e94560;
   color: #fff;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.3);
 }
 
 .send-code-btn:disabled {
-  border-color: #e0e0e0;
-  color: #999;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.verify-code-btn {
-  padding: 0.9rem 1.2rem;
-  border: 1px solid #4CAF50;
-  border-radius: 8px;
-  background-color: #fff;
-  color: #4CAF50;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  white-space: nowrap;
-}
-
-.verify-code-btn:hover:not(:disabled) {
-  background-color: #4CAF50;
-  color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-}
-
-.verify-code-btn:disabled {
   border-color: #e0e0e0;
   color: #999;
   cursor: not-allowed;
@@ -573,7 +472,7 @@ const handleSubmit = async () => {
   padding: 0.9rem;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #e94560 0%, #c23a51 100%);
   color: #fff;
   font-size: 1rem;
   font-weight: 600;
@@ -584,7 +483,7 @@ const handleSubmit = async () => {
 
 .submit-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
 }
 
 .submit-btn:disabled {
@@ -618,44 +517,48 @@ const handleSubmit = async () => {
 }
 
 .form-footer .link {
-  color: #667eea;
+  color: #e94560;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
-  margin-left: 0.25rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .form-footer .link:hover {
-  color: #764ba2;
+  color: #c23a51;
   text-decoration: underline;
 }
 
 @media (max-width: 768px) {
-  .register-container {
+  .admin-create-container {
     padding: 1rem;
   }
-  
-  .register-form {
+
+  .admin-create-form {
     padding: 2rem;
   }
-  
+
   .form-header h2 {
     font-size: 1.5rem;
   }
-  
+
   .code-input-wrapper {
     flex-direction: column;
   }
-  
-  .send-code-btn,
-  .verify-code-btn {
+
+  .send-code-btn {
     width: 100%;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .submit-btn {
     width: 100%;
   }

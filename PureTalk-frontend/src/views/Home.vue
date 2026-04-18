@@ -4,10 +4,16 @@
       <h1>PureTalk</h1>
       <div class="header-actions">
         <button v-if="isLoggedIn" class="btn primary-btn" @click="showPostModal = true">发布帖子</button>
-        <router-link to="/login" v-if="!isLoggedIn" class="btn">登录</router-link>
-        <router-link to="/register" v-if="!isLoggedIn" class="btn">注册</router-link>
-        <router-link to="/user/profile" v-else-if="userType === 'user'" class="btn">个人中心</router-link>
-        <router-link to="/admin" v-else-if="userType === 'admin'" class="btn">管理中心</router-link>
+        <template v-if="!isLoggedIn">
+          <router-link to="/login" class="btn">登录</router-link>
+          <router-link to="/register" class="btn">注册</router-link>
+        </template>
+        <template v-else>
+          <router-link to="/notification" class="btn icon-btn">🔔</router-link>
+          <router-link to="/feedback" class="btn icon-btn">📝</router-link>
+          <router-link to="/user/profile" v-if="userType === 'user'" class="btn">个人中心</router-link>
+          <router-link to="/admin" v-else-if="userType === 'admin'" class="btn">管理中心</router-link>
+        </template>
       </div>
     </header>
     
@@ -44,8 +50,16 @@
           <p class="post-content">{{ post.content }}</p>
           <div class="post-meta">
             <span class="post-author">{{ post.username }}</span>
-            <span class="post-time">{{ formatTime(post.createTime) }}</span>
-            <div class="post-stats">
+            <span class="post-time">{{ post.createTime }}</span>
+            <button 
+              v-if="isLoggedIn && post.userId === currentUserId" 
+              class="delete-btn"
+              @click="deletePost(post.id)"
+            >
+              删除
+            </button>
+          </div>
+          <div class="post-stats">
               <span class="stat-item">
                 <span class="stat-icon">👍</span>
                 <span>{{ post.likeCount }}</span>
@@ -60,7 +74,6 @@
               </span>
             </div>
           </div>
-        </div>
         
         <div v-if="loading" class="loading">
           <div class="loading-spinner"></div>
@@ -130,6 +143,7 @@ const loading = ref<boolean>(false)
 const hasMore = ref<boolean>(true)
 const isLoggedIn = ref<boolean>(!!localStorage.getItem('token'))
 const userType = ref<string>(localStorage.getItem('userType') || 'user')
+const currentUserId = ref<number>(Number(localStorage.getItem('userId') || '0'))
 const showPostModal = ref<boolean>(false)
 const submittingPost = ref<boolean>(false)
 const postForm = ref({
@@ -179,10 +193,6 @@ const goToPostDetail = (postId: number) => {
   router.push(`/post/${postId}`)
 }
 
-const formatTime = (time: string) => {
-  return new Date(time).toLocaleString()
-}
-
 const handleScroll = debounce(() => {
   if (!postListRef.value) return
   
@@ -200,6 +210,34 @@ const closePostModal = () => {
     content: ''
   }
   submittingPost.value = false
+}
+
+const deletePost = async (postId: number) => {
+  if (!confirm('确定要删除这篇帖子吗？')) {
+    return
+  }
+  
+  try {
+    const response = await postApi.deleteMyPost(postId)
+    const data = response as any
+    if (data.code === 200) {
+      alert('删除成功')
+      // 重新加载帖子列表
+      currentPage.value = 1
+      posts.value = []
+      hasMore.value = true
+      loadPosts()
+    } else {
+      alert(data.msg || '删除失败')
+    }
+  } catch (error: any) {
+    console.error('删除帖子失败:', error)
+    if (error.msg) {
+      alert('删除失败: ' + error.msg)
+    } else {
+      alert('删除失败，请稍后重试')
+    }
+  }
 }
 
 const submitPost = async () => {
@@ -548,6 +586,22 @@ onMounted(() => {
   margin-top: 2rem;
 }
 
+.delete-btn {
+  background-color: #ff4757;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: auto;
+}
+
+.delete-btn:hover {
+  background-color: #ff3742;
+}
+
 @media (max-width: 768px) {
   .header {
     padding: 1rem;
@@ -577,6 +631,10 @@ onMounted(() => {
   
   .form-actions button {
     width: 100%;
+  }
+  
+  .delete-btn {
+    margin-left: 0.5rem;
   }
 }
 </style>

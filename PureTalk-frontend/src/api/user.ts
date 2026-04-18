@@ -107,3 +107,16 @@ export const rootApi = {
   // 校验邮箱验证码
   validateEmailCode: (data: { email: string; emailCode: string }) => axios.post<Result>('/root/register/email', data)
 }
+
+export function getUserId(): number {
+  const userId = localStorage.getItem('userId')
+  return userId ? Number(userId) : 0
+}
+
+export function getToken(): string {
+  return localStorage.getItem('token') || ''
+}
+
+export function getRole(): string {
+  return localStorage.getItem('role') || ''
+}

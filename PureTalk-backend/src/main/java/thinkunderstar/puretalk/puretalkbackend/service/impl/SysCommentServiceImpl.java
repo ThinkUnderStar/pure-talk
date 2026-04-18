@@ -86,7 +86,7 @@ public class SysCommentServiceImpl implements SysCommentService {
         }
 
         //删除用户自己发出的评论的业务代码
-        commentService.remove(new QueryWrapper<Comment>().eq("parentId",commentId));
+        commentService.remove(new LambdaQueryWrapper<Comment>().eq(Comment::getParentId, commentId));
         commentService.removeById(commentId);
 
         return Result.success();

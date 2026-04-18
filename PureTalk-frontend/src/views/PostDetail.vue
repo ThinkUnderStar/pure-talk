@@ -4,6 +4,7 @@
       <button class="back-btn" @click="goBack">← 返回</button>
       <h1>PureTalk</h1>
       <div class="header-actions">
+        <router-link to="/notification" v-if="isLoggedIn" class="btn icon-btn">🔔</router-link>
         <router-link to="/login" v-if="!isLoggedIn" class="btn">登录</router-link>
         <router-link to="/user/profile" v-else class="btn">个人中心</router-link>
       </div>
@@ -18,8 +19,26 @@
       <div v-else-if="post" class="post-content">
         <h2 class="post-title">{{ post.title }}</h2>
         <div class="post-meta">
-          <span class="post-author">{{ post.username }}</span>
-          <span class="post-time">{{ formatTime(post.createTime) }}</span>
+          <div class="post-meta-left">
+            <span class="post-author">{{ post.username }}</span>
+            <span class="post-time">{{ formatTime(post.createTime) }}</span>
+          </div>
+          <div class="post-meta-right">
+            <button
+              v-if="isLoggedIn && post.userId === currentUserId"
+              class="delete-btn"
+              @click="deletePost"
+            >
+              删除帖子
+            </button>
+            <button
+              v-if="isLoggedIn"
+              class="report-btn"
+              @click="reportPost"
+            >
+              举报
+            </button>
+          </div>
           <div class="post-stats">
             <span class="stat-item" @click="likePost">
               <span class="stat-icon">{{ isLiked ? '❤️' : '👍' }}</span>
@@ -66,7 +85,16 @@
           >
             <div class="comment-header">
               <span class="comment-author">{{ comment.username }}</span>
-              <span class="comment-time">{{ formatTime(comment.createTime) }}</span>
+              <div class="comment-header-actions">
+                <span class="comment-time">{{ formatTime(comment.createTime) }}</span>
+                <button
+                  v-if="isLoggedIn && comment.userId === currentUserId"
+                  class="comment-delete-btn"
+                  @click.stop="deleteComment(comment.id)"
+                >
+                  删除
+                </button>
+              </div>
             </div>
             <div class="comment-body">
               {{ comment.content }}
@@ -113,6 +141,7 @@ const currentCommentPage = ref<number>(1)
 const commentContent = ref<string>('')
 const isLiked = ref<boolean>(false)
 const isLoggedIn = ref<boolean>(!!localStorage.getItem('token'))
+const currentUserId = ref<number>(Number(localStorage.getItem('userId') || '0'))
 const commentListRef = ref<HTMLElement | null>(null)
 
 const loadPost = async () => {
@@ -161,14 +190,19 @@ const likePost = async () => {
     router.push('/login')
     return
   }
-  
+
   try {
     const response = await postApi.likePost(postId.value)
     const data = response as any
     if (data.code === 200) {
       if (post.value) {
-        post.value.likeCount++
-        isLiked.value = true
+        // 点赞切换效果：已点赞则取消（点赞数-1），未点赞则点赞（点赞数+1）
+        if (isLiked.value) {
+          post.value.likeCount--
+        } else {
+          post.value.likeCount++
+        }
+        isLiked.value = !isLiked.value
       }
     }
   } catch (error) {
@@ -181,16 +215,19 @@ const likeComment = async (commentId: number) => {
     router.push('/login')
     return
   }
-  
+
+  const comment = comments.value.find(c => c.id === commentId)
+  if (!comment) return
+
+  const wasLiked = comment.isLiked
+
   try {
     const response = await commentApi.likeComment(commentId)
     const data = response as any
     if (data.code === 200) {
-      const comment = comments.value.find(c => c.id === commentId)
-      if (comment) {
-        comment.likeCount++
-        comment.isLiked = true
-      }
+      // 点赞切换效果：已点赞则取消（点赞数-1），未点赞则点赞（点赞数+1）
+      comment.likeCount = wasLiked ? comment.likeCount - 1 : comment.likeCount + 1
+      comment.isLiked = !wasLiked
     }
   } catch (error) {
     console.error('点赞评论失败:', error)
@@ -232,7 +269,70 @@ const submitComment = async () => {
 }
 
 const goBack = () => {
-  router.back()
+  // 直接返回首页，避免循环
+  router.push('/')
+}
+
+const reportPost = () => {
+  router.push(`/report?type=post&targetId=${postId.value}`)
+}
+
+const deleteComment = (commentId: number) => {
+  // 先显示确认弹窗
+  const userConfirmed = confirm('确定要删除这条评论吗？')
+  
+  // 只有用户点击确定后才执行删除操作
+  if (userConfirmed) {
+    // 延迟执行，确保弹窗逻辑完全完成
+    setTimeout(async () => {
+      try {
+        const response = await commentApi.deleteMyComment(commentId)
+        const data = response as any
+        if (data.code === 200) {
+          // 从列表中移除删除的评论
+          const index = comments.value.findIndex(c => c.id === commentId)
+          if (index > -1) {
+            comments.value.splice(index, 1)
+          }
+          alert('评论删除成功')
+        } else {
+          alert(data.message || '删除失败')
+        }
+      } catch (error: any) {
+        console.error('删除评论失败:', error)
+        alert(error.message || '删除失败')
+      }
+    }, 100)
+  }
+}
+
+const deletePost = () => {
+  // 先显示确认弹窗
+  const userConfirmed = confirm('确定要删除这篇帖子吗？')
+  
+  // 只有用户点击确定后才执行删除操作
+  if (userConfirmed) {
+    // 延迟执行，确保弹窗逻辑完全完成
+    setTimeout(async () => {
+      try {
+        const response = await postApi.deleteMyPost(postId.value)
+        const data = response as any
+        if (data.code === 200) {
+          alert('删除成功')
+          router.push('/')
+        } else {
+          alert(data.msg || '删除失败')
+        }
+      } catch (error: any) {
+        console.error('删除帖子失败:', error)
+        if (error.msg) {
+          alert('删除失败: ' + error.msg)
+        } else {
+          alert('删除失败，请稍后重试')
+        }
+      }
+    }, 100)
+  }
 }
 
 const formatTime = (time: string) => {
@@ -365,8 +465,30 @@ onMounted(() => {
   font-size: 0.9rem;
   color: #999;
   margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.post-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.post-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.post-stats {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f0f0f0;
+  width: 100%;
 }
 
 .post-author {
@@ -459,6 +581,66 @@ onMounted(() => {
 .submit-comment-btn:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+.delete-btn {
+  background-color: #ff4757;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 1rem;
+}
+
+.delete-btn:hover {
+  background-color: #ff3742;
+}
+
+.report-btn {
+  background-color: #ffa500;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 0.5rem;
+}
+
+.report-btn:hover {
+  background-color: #ff8c00;
+}
+
+.comment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.comment-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.comment-delete-btn {
+  background-color: #ff4757;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.comment-delete-btn:hover {
+  background-color: #ff3742;
 }
 
 .comment-list {

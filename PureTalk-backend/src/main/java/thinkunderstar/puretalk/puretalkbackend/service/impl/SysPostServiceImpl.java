@@ -103,7 +103,7 @@ public class SysPostServiceImpl implements SysPostService {
         }
 
         //删除用户自己发出的帖子的业务代码
-        commentService.remove(new QueryWrapper<Comment>().eq("postId",postId));
+        commentService.remove(new LambdaQueryWrapper<Comment>().eq(Comment::getPostId, postId));
         postService.removeById(postId);
 
         return Result.success();

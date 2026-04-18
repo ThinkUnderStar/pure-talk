@@ -11,7 +11,18 @@
     <main class="main">
       <div class="profile-card">
         <h2>个人信息</h2>
-        
+
+        <div class="quick-links">
+          <router-link to="/notification" class="quick-link">
+            <span class="link-icon">🔔</span>
+            <span class="link-text">我的通知</span>
+          </router-link>
+          <router-link to="/feedback" class="quick-link">
+            <span class="link-icon">📝</span>
+            <span class="link-text">意见反馈</span>
+          </router-link>
+        </div>
+
         <div class="profile-form">
           <div class="form-group">
             <label for="username">用户名</label>
@@ -144,7 +155,8 @@ const handleLogout = async () => {
 }
 
 const goBack = () => {
-  router.back()
+  // 直接返回首页，避免循环
+  router.push('/')
 }
 </script>
 
@@ -222,6 +234,42 @@ const goBack = () => {
   color: #333;
   margin-bottom: 2rem;
   text-align: center;
+}
+
+.quick-links {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.quick-link {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.quick-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.link-icon {
+  font-size: 1.2rem;
+}
+
+.link-text {
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .profile-form {
