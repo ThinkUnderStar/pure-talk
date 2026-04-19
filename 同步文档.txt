@@ -159,3 +159,21 @@ uuid
 ---
 -------------------------------------------------------------------------------
 
+alter table comments
+    add path varchar(500) null comment '评论路径';
+
+CREATE INDEX idx_path ON comments(path);
+
+#配置日志
+logging:
+  file:
+    name: ./logs/pure-talk.log
+  charset:
+    file: UTF-8
+    console: UTF-8
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+
+
+
