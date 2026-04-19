@@ -6,6 +6,7 @@ export interface DoSendComment {
   content: string
   userId: number
   parentId?: number
+  replyUserId?: number
 }
 
 export interface Comment {

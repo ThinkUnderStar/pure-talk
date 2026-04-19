@@ -82,6 +82,7 @@
             v-for="comment in comments" 
             :key="comment.id" 
             class="comment-item"
+            @click="showReplyInput(comment.id, comment.username)"
           >
             <div class="comment-header">
               <span class="comment-author">{{ comment.username }}</span>
@@ -100,10 +101,33 @@
               {{ comment.content }}
             </div>
             <div class="comment-footer">
-              <span class="comment-like" @click="likeComment(comment.id)">
+              <span class="comment-like" @click.stop="likeComment(comment.id)">
                 <span class="like-icon">{{ comment.isLiked ? '❤️' : '👍' }}</span>
                 <span>{{ comment.likeCount }}</span>
               </span>
+              <span class="comment-reply-btn" @click.stop="showReplyInput(comment.id, comment.username)">
+                回复
+              </span>
+            </div>
+            
+            <div v-if="replyToCommentId === comment.id" class="reply-input-box" @click.stop>
+              <div class="reply-header">
+                <span>回复 @{{ replyToUsername }}</span>
+                <button class="cancel-reply-btn" @click="cancelReply">取消</button>
+              </div>
+              <textarea 
+                v-model="replyContent" 
+                :placeholder="`回复 @${replyToUsername}...`"
+                rows="2"
+                @click.stop
+              ></textarea>
+              <button 
+                class="submit-reply-btn" 
+                :disabled="!replyContent.trim() || submittingReply"
+                @click.stop="submitReply"
+              >
+                {{ submittingReply ? '提交中...' : '提交回复' }}
+              </button>
             </div>
           </div>
           
@@ -139,6 +163,10 @@ const submittingComment = ref<boolean>(false)
 const hasMoreComments = ref<boolean>(true)
 const currentCommentPage = ref<number>(1)
 const commentContent = ref<string>('')
+const replyToCommentId = ref<number | null>(null)
+const replyToUsername = ref<string>('')
+const replyContent = ref<string>('')
+const submittingReply = ref<boolean>(false)
 const isLiked = ref<boolean>(false)
 const isLoggedIn = ref<boolean>(!!localStorage.getItem('token'))
 const currentUserId = ref<number>(Number(localStorage.getItem('userId') || '0'))
@@ -265,6 +293,56 @@ const submitComment = async () => {
     }
   } finally {
     submittingComment.value = false
+  }
+}
+
+const showReplyInput = (commentId: number, username: string) => {
+  if (!isLoggedIn.value) {
+    router.push('/login')
+    return
+  }
+  replyToCommentId.value = commentId
+  replyToUsername.value = username
+  replyContent.value = ''
+}
+
+const cancelReply = () => {
+  replyToCommentId.value = null
+  replyToUsername.value = ''
+  replyContent.value = ''
+}
+
+const submitReply = async () => {
+  if (!replyContent.value.trim() || !replyToCommentId.value) return
+  
+  submittingReply.value = true
+  try {
+    const userId = localStorage.getItem('userId') || '1'
+    const response = await commentApi.sendComment({
+      postId: postId.value,
+      content: replyContent.value,
+      userId: Number(userId),
+      parentId: replyToCommentId.value,
+      replyUserId: comments.value.find(c => c.id === replyToCommentId.value)?.userId || 0
+    })
+    const data = response as any
+    if (data.code === 200) {
+      replyContent.value = ''
+      replyToCommentId.value = null
+      replyToUsername.value = ''
+      // 重新加载评论
+      currentCommentPage.value = 1
+      comments.value = []
+      hasMoreComments.value = true
+      loadComments()
+    } else {
+      alert(data.msg || '回复失败')
+    }
+  } catch (error: any) {
+    console.error('提交回复失败:', error)
+    alert(error.message || '回复失败，请稍后重试')
+  } finally {
+    submittingReply.value = false
   }
 }
 
@@ -685,6 +763,86 @@ onMounted(() => {
 .comment-footer {
   display: flex;
   justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+}
+
+.comment-reply-btn {
+  font-size: 0.85rem;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.comment-reply-btn:hover {
+  color: #e94560;
+}
+
+.reply-input-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.reply-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.cancel-reply-btn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.cancel-reply-btn:hover {
+  color: #e94560;
+}
+
+.reply-input-box textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  resize: vertical;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.reply-input-box textarea:focus {
+  outline: none;
+  border-color: #e94560;
+}
+
+.submit-reply-btn {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.5rem;
+  background: #e94560;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.submit-reply-btn:hover:not(:disabled) {
+  background: #c23a51;
+}
+
+.submit-reply-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 .comment-like {
