@@ -98,6 +98,9 @@
               </div>
             </div>
             <div class="comment-body">
+              <div v-if="comment.parentId && comment.parentId !== 0" class="reply-indicator">
+                回复 @{{ getParentCommentUsername(comment.parentId) }}
+              </div>
               {{ comment.content }}
             </div>
             <div class="comment-footer">
@@ -271,7 +274,9 @@ const submitComment = async () => {
     const response = await commentApi.sendComment({
       postId: postId.value,
       content: commentContent.value,
-      userId: Number(userId)
+      userId: Number(userId),
+      parentId: 0,
+      replyUserId: 0
     })
     const data = response as any
     if (data.code === 200) {
@@ -349,6 +354,11 @@ const submitReply = async () => {
 const goBack = () => {
   // 直接返回首页，避免循环
   router.push('/')
+}
+
+const getParentCommentUsername = (parentId: number): string => {
+  const parentComment = comments.value.find(c => c.id === parentId)
+  return parentComment?.username || '未知用户'
 }
 
 const reportPost = () => {
@@ -758,6 +768,14 @@ onMounted(() => {
   line-height: 1.5;
   color: #333;
   margin-bottom: 0.5rem;
+}
+
+.reply-indicator {
+  font-size: 0.8rem;
+  color: #999;
+  margin-bottom: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid #e0e0e0;
 }
 
 .comment-footer {
