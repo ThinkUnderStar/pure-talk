@@ -74,4 +74,9 @@ public class Comment {
     @Version
     @TableField(value = "update_time",fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
+
+    /**
+     * 评论路径
+     */
+    private String path;
 }

@@ -19,6 +19,7 @@ import thinkunderstar.puretalk.puretalkbackend.service.SysCommentService;
 import thinkunderstar.puretalk.puretalkbackend.util.RedisTokenBucketLimiter;
 import thinkunderstar.puretalk.puretalkbackend.util.RedisUtils;
 
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -62,6 +63,13 @@ public class SysCommentServiceImpl implements SysCommentService {
                 , doSendComment.getParentId()
                 , doSendComment.getReplyUserId());
 
+        if (doSendComment.getParentId() == 0){
+            comment.setPath(doSendComment.getPostId()+"/");
+        }else {
+            String parentPath = commentService.getById(doSendComment.getParentId()).getPath();
+            comment.setPath(parentPath + doSendComment.getParentId() + "/");
+        }
+
         commentService.save(comment);
 
         //评论数+1
@@ -85,9 +93,20 @@ public class SysCommentServiceImpl implements SysCommentService {
             throw new BusinessException("不能删除他人的评论");
         }
 
+        List<Comment> list = commentService.list(new LambdaQueryWrapper<Comment>().likeRight(Comment::getPath, comment.getPath() + comment.getId() + "/"));
+        list.add(comment);
+
         //删除用户自己发出的评论的业务代码
-        commentService.remove(new LambdaQueryWrapper<Comment>().eq(Comment::getParentId, commentId));
-        commentService.removeById(commentId);
+        commentService.removeByIds(list);
+
+        Post post = postService.getById(comment.getPostId());
+
+        if (post == null){
+            throw new BusinessException("该帖子不存在");
+        }
+
+        post.setCommentCount(post.getCommentCount() - list.size());
+        postService.updateById(post);
 
         return Result.success();
     }
@@ -101,9 +120,20 @@ public class SysCommentServiceImpl implements SysCommentService {
             throw new BusinessException("未查询到该评论");
         }
 
-        //删除帖子的业务代码
-        commentService.remove(new QueryWrapper<Comment>().eq("parentId",commentId));
-        commentService.removeById(commentId);
+        List<Comment> list = commentService.list(new LambdaQueryWrapper<Comment>().likeRight(Comment::getPath, comment.getPath() + comment.getId() + "/"));
+        list.add(comment);
+
+        //删除用户自己发出的评论的业务代码
+        commentService.removeByIds(list);
+
+        Post post = postService.getById(comment.getPostId());
+
+        if (post == null){
+            throw new BusinessException("该帖子不存在");
+        }
+
+        post.setCommentCount(post.getCommentCount() - list.size());
+        postService.updateById(post);
 
         return Result.success();
     }
