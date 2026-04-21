@@ -237,7 +237,7 @@ public class SysUserServiceImpl implements SysUserService {
     }
 
     @Override
-    public Result uploadAvatar(MultipartFile file) {
+    public Result uploadAvatar(MultipartFile file){
         //判断文件非空
          if (file.isEmpty()){
             throw new BusinessException("头像文件为空");
@@ -258,7 +258,7 @@ public class SysUserServiceImpl implements SysUserService {
         //判断是否有旧头像文件，如果求则删除，没有则跳过
         if (!(user.getAvatar() == null || user.getAvatar().isEmpty())) {
             try {
-                Files.deleteIfExists(Path.of(user.getAvatar().replaceFirst("^/uploads/", "./uploads/")));
+                Files.deleteIfExists(Path.of("."+user.getAvatar()));
             } catch (IOException e) {
                 log.warn("删除旧头像失败，文件可能被占用：{}", user.getAvatar(), e);
             }
@@ -266,9 +266,22 @@ public class SysUserServiceImpl implements SysUserService {
 
         //保存新的头像文件
         String filePath = "/uploads/" + user.getId() + "-" +System.currentTimeMillis() + suffix;
-        File newFile = new File(filePath);
+        File newFile = new File("." + filePath);
 
-        if ()
+        if (!newFile.getParentFile().exists()){
+            newFile.getParentFile().mkdirs();
+        }
+
+        try {
+            file.transferTo(Path.of("." + filePath));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        user.setAvatar(filePath);
+        userService.updateById(user);
+
+        return Result.success(filePath);
     }
 
     /**

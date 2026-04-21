@@ -69,7 +69,7 @@ public class UserController {
     @PostMapping("/avatar")
     @SaCheckLogin
     public Result uploadAvatar(@RequestParam("file") MultipartFile file){
-
+        return sysUserService.uploadAvatar(file);
     }
 
     /**
