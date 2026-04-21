@@ -5,6 +5,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,10 +20,12 @@ import thinkunderstar.puretalk.puretalkbackend.service.SysUserService;
 import thinkunderstar.puretalk.puretalkbackend.service.UserService;
 import thinkunderstar.puretalk.puretalkbackend.util.*;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +33,7 @@ import java.util.concurrent.TimeUnit;
  * 系统用户服务实现类，提供发送和验证邮箱及手机验证码的具体实现。
  * 通过与Redis的交互，确保验证码的安全性和时效性。
  */
+@Slf4j
 @Service
 public class SysUserServiceImpl implements SysUserService {
     private final UserService userService;
@@ -250,15 +254,21 @@ public class SysUserServiceImpl implements SysUserService {
         }
 
         User user = userService.getById(StpUtil.getLoginIdAsLong());
+
+        //判断是否有旧头像文件，如果求则删除，没有则跳过
         if (!(user.getAvatar() == null || user.getAvatar().isEmpty())) {
             try {
-                Files.deleteIfExists(Path.of(user.getAvatar()));
+                Files.deleteIfExists(Path.of(user.getAvatar().replaceFirst("^/uploads/", "./uploads/")));
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                log.warn("删除旧头像失败，文件可能被占用：{}", user.getAvatar(), e);
             }
         }
 
+        //保存新的头像文件
+        String filePath = "/uploads/" + user.getId() + "-" +System.currentTimeMillis() + suffix;
+        File newFile = new File(filePath);
 
+        if ()
     }
 
     /**
