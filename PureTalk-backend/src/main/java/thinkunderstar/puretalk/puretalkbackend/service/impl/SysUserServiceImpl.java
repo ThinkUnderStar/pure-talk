@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import thinkunderstar.puretalk.puretalkbackend.common.*;
 import thinkunderstar.puretalk.puretalkbackend.entity.User;
 import thinkunderstar.puretalk.puretalkbackend.exception.AlreadyExistsException;
@@ -17,7 +18,12 @@ import thinkunderstar.puretalk.puretalkbackend.service.SysAdminService;
 import thinkunderstar.puretalk.puretalkbackend.service.SysUserService;
 import thinkunderstar.puretalk.puretalkbackend.service.UserService;
 import thinkunderstar.puretalk.puretalkbackend.util.*;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -224,6 +230,35 @@ public class SysUserServiceImpl implements SysUserService {
                     ,user.getBannedUntil()
                     ,StpUtil.getTokenValue()));
         }
+    }
+
+    @Override
+    public Result uploadAvatar(MultipartFile file) {
+        //判断文件非空
+         if (file.isEmpty()){
+            throw new BusinessException("头像文件为空");
+         }
+
+        //判断文件格式是否正确
+        String originalFilename = file.getOriginalFilename();
+         if (originalFilename == null || originalFilename.isEmpty()){
+             throw new BusinessException("只接受jpg,jpeg,png,gif文件格式");
+         }
+        String suffix  = originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase();
+        if (!List.of(".jpg", ".jpeg", ".png", ".gif").contains(suffix)){
+            throw new BusinessException("只接受jpg,jpeg,png,gif文件格式");
+        }
+
+        User user = userService.getById(StpUtil.getLoginIdAsLong());
+        if (!(user.getAvatar() == null || user.getAvatar().isEmpty())) {
+            try {
+                Files.deleteIfExists(Path.of(user.getAvatar()));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
     }
 
     /**

@@ -4,6 +4,7 @@ import cn.dev33.satoken.annotation.SaCheckLogin;
 import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import thinkunderstar.puretalk.puretalkbackend.common.*;
 import thinkunderstar.puretalk.puretalkbackend.entity.User;
 import thinkunderstar.puretalk.puretalkbackend.exception.AuthException;
@@ -57,6 +58,18 @@ public class UserController {
         }else{
             throw new BusinessException("验证码有误");
         }
+    }
+
+    /**
+     * 用户上传自己的头像
+     *
+     * @param file 头像文件
+     * @return 存储结果与存储的头像文件
+     */
+    @PostMapping("/avatar")
+    @SaCheckLogin
+    public Result uploadAvatar(@RequestParam("file") MultipartFile file){
+
     }
 
     /**

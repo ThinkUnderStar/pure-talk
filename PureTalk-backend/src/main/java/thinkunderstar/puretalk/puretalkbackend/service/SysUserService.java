@@ -1,6 +1,7 @@
 package thinkunderstar.puretalk.puretalkbackend.service;
 
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.multipart.MultipartFile;
 import thinkunderstar.puretalk.puretalkbackend.common.*;
 
 /**
@@ -47,6 +48,14 @@ public interface SysUserService {
      * @return 返回一个Result对象，包含状态码、提示信息及数据。成功时返回200状态码，失败则返回500状态码，并附带相应的错误信息
      */
     Result doLogin(DoLogin doLogin);
+
+    /**
+     * 用户上传自己的头像
+     *
+     * @param file 头像文件
+     * @return 存储结果与存储的头像文件
+     */
+    Result uploadAvatar(MultipartFile file);
 
     /**
      * 执行用户注册操作。
