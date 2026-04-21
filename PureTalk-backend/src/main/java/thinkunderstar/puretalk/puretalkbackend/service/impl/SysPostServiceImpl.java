@@ -6,17 +6,21 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import thinkunderstar.puretalk.puretalkbackend.common.DoSendPost;
+import thinkunderstar.puretalk.puretalkbackend.common.PostVO;
 import thinkunderstar.puretalk.puretalkbackend.common.Result;
 import thinkunderstar.puretalk.puretalkbackend.entity.Comment;
 import thinkunderstar.puretalk.puretalkbackend.entity.Post;
+import thinkunderstar.puretalk.puretalkbackend.entity.User;
 import thinkunderstar.puretalk.puretalkbackend.exception.BusinessException;
 import thinkunderstar.puretalk.puretalkbackend.mapper.PostMapper;
 import thinkunderstar.puretalk.puretalkbackend.service.CommentService;
 import thinkunderstar.puretalk.puretalkbackend.service.PostService;
 import thinkunderstar.puretalk.puretalkbackend.service.SysPostService;
+import thinkunderstar.puretalk.puretalkbackend.service.UserService;
 import thinkunderstar.puretalk.puretalkbackend.util.RedisTokenBucketLimiter;
 import thinkunderstar.puretalk.puretalkbackend.util.RedisUtils;
 
@@ -24,10 +28,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -45,14 +48,16 @@ public class SysPostServiceImpl implements SysPostService {
     private final RedisUtils redisUtils;
     private final PostMapper postMapper;
     private final RedisTokenBucketLimiter redisTokenBucketLimiter;
+    private final UserService userService;
 
-    public SysPostServiceImpl(PostService postService, SensitiveWordManager sensitiveWordManager, CommentService commentService, RedisUtils redisUtils, PostMapper postMapper, RedisTokenBucketLimiter redisTokenBucketLimiter) {
+    public SysPostServiceImpl(PostService postService, SensitiveWordManager sensitiveWordManager, CommentService commentService, RedisUtils redisUtils, PostMapper postMapper, RedisTokenBucketLimiter redisTokenBucketLimiter, UserService userService) {
         this.postService = postService;
         this.sensitiveWordManager = sensitiveWordManager;
         this.commentService = commentService;
         this.redisUtils = redisUtils;
         this.postMapper = postMapper;
         this.redisTokenBucketLimiter = redisTokenBucketLimiter;
+        this.userService = userService;
     }
 
     @Override
@@ -251,6 +256,38 @@ public class SysPostServiceImpl implements SysPostService {
             pageResult = postMapper.selectPage(postPage, lambdaQueryWrapper);
         }
 
-        return Result.success(pageResult);
+        //封装VO类
+        Set<Long> userIds = pageResult.getRecords().stream().map(Post::getUserId).collect(Collectors.toSet());
+
+        Map<Long,User> map = new HashMap<>();
+
+        List<User> users = List.of();
+        if (!userIds.isEmpty()){
+             users = userService.listByIds(userIds);
+        }
+
+        users.forEach(user -> {
+            map.put(user.getId(),user);
+        });
+
+        List<PostVO> voList = pageResult.getRecords().stream().map(post -> {
+            PostVO postVO = new PostVO();
+            BeanUtils.copyProperties(post, postVO);
+            //新增字段
+            if (map.get(post.getUserId()) == null){
+                postVO.setUserName("该用户已注销");
+                postVO.setAvatar(null);
+            }else {
+                postVO.setUserName(map.get(post.getUserId()).getUsername());
+                postVO.setAvatar(map.get(post.getUserId()).getAvatar());
+            }
+
+            return postVO;
+        }).toList();
+
+        Page<PostVO> pageVOResult = new Page<>(page,size,pageResult.getTotal());
+        pageVOResult.setRecords(voList);
+
+        return Result.success(pageVOResult);
     }
 }
