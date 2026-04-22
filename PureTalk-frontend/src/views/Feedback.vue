@@ -20,6 +20,18 @@
         </div>
       </div>
 
+      <div class="form-group" v-if="form.type === 'other'">
+        <label for="title">反馈标题</label>
+        <input
+          type="text"
+          id="title"
+          v-model="form.title"
+          placeholder="请输入反馈标题..."
+          maxlength="50"
+        />
+        <span class="char-count">{{ form.title.length }}/50</span>
+      </div>
+
       <div class="form-group">
         <label for="content">反馈内容</label>
         <textarea
@@ -68,11 +80,14 @@ const feedbackTypes = [
 
 const form = ref({
   type: 'suggestion',
+  title: '',
   content: ''
 })
 
 const isFormValid = computed(() => {
-  return form.value.content.trim().length >= 10 && form.value.content.length <= 500
+  const contentValid = form.value.content.trim().length >= 10 && form.value.content.length <= 500
+  const titleValid = form.value.type === 'other' ? form.value.title.trim().length >= 2 && form.value.title.length <= 50 : true
+  return contentValid && titleValid
 })
 
 const submitFeedback = debounce(async () => {
@@ -92,8 +107,8 @@ const submitFeedback = debounce(async () => {
     loading.value = true
     const response = await feedbackApi.sendFeedback({
       userId,
-      content: form.value.content,
-      type: form.value.type
+      title: form.value.type === 'other' ? form.value.title : form.value.type === 'suggestion' ? '功能建议' : form.value.type === 'bug' ? 'Bug反馈' : form.value.type === 'experience' ? '体验问题' : '其他',
+      content: form.value.content
     })
     const data = response as any
     if (data.code === 200) {
@@ -186,6 +201,23 @@ const submitFeedback = debounce(async () => {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 textarea {

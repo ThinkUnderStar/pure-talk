@@ -226,6 +226,7 @@ const handleSubmit = debounce(async () => {
       localStorage.setItem('userId', data.data?.id?.toString() || '')
       localStorage.setItem('userType', userType.value)
       localStorage.setItem('username', data.data?.username || '')
+      localStorage.setItem('avatar', data.data?.avatar || '')
       router.replace('/')
     } else {
       alert(data.message || '登录失败')

@@ -76,6 +76,10 @@ export const userApi = {
   deleteAccount: () => axios.delete<Result>('/user/delete'),
   // 登出
   logout: () => axios.post<Result>('/user/logout'),
+  // 上传头像
+  uploadAvatar: (file: FormData) => axios.post<Result<string>>('/user/avatar', file, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
   // 更新用户信息
   update: (data: DoUpdate) => axios.put<Result>('/user/update', data)
 }

@@ -14,10 +14,12 @@ export interface Comment {
   postId: number
   userId: number
   username: string
+  avatar: string
   content: string
   parentId?: number
   likeCount: number
   createTime: string
+  replyUserName?: string
 }
 
 export interface CommentPageResult {

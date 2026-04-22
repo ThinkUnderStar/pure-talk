@@ -11,8 +11,15 @@
         <template v-else>
           <router-link to="/notification" class="btn icon-btn">🔔</router-link>
           <router-link to="/feedback" class="btn icon-btn">📝</router-link>
-          <router-link to="/user/profile" v-if="userType === 'user'" class="btn">个人中心</router-link>
-          <router-link to="/admin" v-else-if="userType === 'admin'" class="btn">管理中心</router-link>
+          <router-link to="/user/profile" class="btn user-profile-btn">
+            <img
+              :src="userAvatar || 'https://ui-avatars.com/api/?name=' + username + '&background=random&size=64'"
+              :alt="username"
+              class="header-avatar"
+            />
+            <span>{{ username }}</span>
+          </router-link>
+          <router-link to="/admin" v-if="userType === 'admin'" class="btn">管理中心</router-link>
         </template>
       </div>
     </header>
@@ -143,6 +150,8 @@ const loading = ref<boolean>(false)
 const hasMore = ref<boolean>(true)
 const isLoggedIn = ref<boolean>(!!localStorage.getItem('token'))
 const userType = ref<string>(localStorage.getItem('userType') || 'user')
+const username = ref<string>(localStorage.getItem('username') || '用户')
+const userAvatar = ref<string>(localStorage.getItem('avatar') || '')
 const currentUserId = ref<number>(Number(localStorage.getItem('userId') || '0'))
 const showPostModal = ref<boolean>(false)
 const submittingPost = ref<boolean>(false)
@@ -346,6 +355,33 @@ onMounted(() => {
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
+}
+
+.user-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 20px !important;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none !important;
+}
+
+.user-profile-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.header-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .category-tabs {

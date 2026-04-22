@@ -6,7 +6,14 @@
       <div class="header-actions">
         <router-link to="/notification" v-if="isLoggedIn" class="btn icon-btn">🔔</router-link>
         <router-link to="/login" v-if="!isLoggedIn" class="btn">登录</router-link>
-        <router-link to="/user/profile" v-else class="btn">个人中心</router-link>
+        <router-link to="/user/profile" v-else class="btn user-profile-btn">
+          <img
+            :src="userAvatar || 'https://ui-avatars.com/api/?name=' + username + '&background=random&size=64'"
+            :alt="username"
+            class="header-avatar"
+          />
+          <span>{{ username }}</span>
+        </router-link>
       </div>
     </header>
     
@@ -20,8 +27,15 @@
         <h2 class="post-title">{{ post.title }}</h2>
         <div class="post-meta">
           <div class="post-meta-left">
-            <span class="post-author">{{ post.username }}</span>
-            <span class="post-time">{{ formatTime(post.createTime) }}</span>
+            <img 
+              :src="post.avatar || 'https://ui-avatars.com/api/?name=' + post.username + '&background=random'" 
+              :alt="post.username" 
+              class="post-avatar"
+            />
+            <div class="post-meta-info">
+              <span class="post-author">{{ post.username }}</span>
+              <span class="post-time">{{ formatTime(post.createTime) }}</span>
+            </div>
           </div>
           <div class="post-meta-right">
             <button
@@ -85,21 +99,28 @@
             @click="showReplyInput(comment.id, comment.username)"
           >
             <div class="comment-header">
-              <span class="comment-author">{{ comment.username }}</span>
-              <div class="comment-header-actions">
-                <span class="comment-time">{{ formatTime(comment.createTime) }}</span>
-                <button
-                  v-if="isLoggedIn && comment.userId === currentUserId"
-                  class="comment-delete-btn"
-                  @click.stop="deleteComment(comment.id)"
-                >
-                  删除
-                </button>
+              <img 
+                :src="comment.avatar || 'https://ui-avatars.com/api/?name=' + comment.username + '&background=random'" 
+                :alt="comment.username" 
+                class="comment-avatar"
+              />
+              <div class="comment-header-info">
+                <span class="comment-author">{{ comment.username }}</span>
+                <div class="comment-header-actions">
+                  <span class="comment-time">{{ formatTime(comment.createTime) }}</span>
+                  <button
+                    v-if="isLoggedIn && comment.userId === currentUserId"
+                    class="comment-delete-btn"
+                    @click.stop="deleteComment(comment.id)"
+                  >
+                    删除
+                  </button>
+                </div>
               </div>
             </div>
             <div class="comment-body">
               <div v-if="comment.parentId && comment.parentId !== 0" class="reply-indicator">
-                回复 @{{ getParentCommentUsername(comment.parentId) }}
+                回复 @{{ comment.replyUserName || '未知用户' }}
               </div>
               {{ comment.content }}
             </div>
@@ -173,6 +194,8 @@ const submittingReply = ref<boolean>(false)
 const isLiked = ref<boolean>(false)
 const isLoggedIn = ref<boolean>(!!localStorage.getItem('token'))
 const currentUserId = ref<number>(Number(localStorage.getItem('userId') || '0'))
+const username = ref<string>(localStorage.getItem('username') || '用户')
+const userAvatar = ref<string>(localStorage.getItem('avatar') || '')
 const commentListRef = ref<HTMLElement | null>(null)
 
 const loadPost = async () => {
@@ -356,11 +379,6 @@ const goBack = () => {
   router.push('/')
 }
 
-const getParentCommentUsername = (parentId: number): string => {
-  const parentComment = comments.value.find(c => c.id === parentId)
-  return parentComment?.username || '未知用户'
-}
-
 const reportPost = () => {
   router.push(`/report?type=post&targetId=${postId.value}`)
 }
@@ -484,6 +502,33 @@ onMounted(() => {
   gap: 1rem;
 }
 
+.user-profile-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border-radius: 20px !important;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none !important;
+}
+
+.user-profile-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+}
+
+.header-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
 .btn {
   padding: 0.5rem 1rem;
   border: 1px solid #e0e0e0;
@@ -561,6 +606,19 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+
+.post-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.post-meta-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .post-meta-right {
@@ -747,9 +805,31 @@ onMounted(() => {
 
 .comment-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 0.75rem;
   margin-bottom: 0.5rem;
+}
+
+.comment-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.comment-header-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.comment-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: #999;
 }
 
 .comment-author {

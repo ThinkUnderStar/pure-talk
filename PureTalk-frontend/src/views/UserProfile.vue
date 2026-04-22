@@ -7,72 +7,125 @@
         <button class="logout-btn" @click="handleLogout">登出</button>
       </div>
     </header>
-    
+
     <main class="main">
       <div class="profile-card">
-        <h2>个人信息</h2>
-
-        <div class="quick-links">
-          <router-link to="/notification" class="quick-link">
-            <span class="link-icon">🔔</span>
-            <span class="link-text">我的通知</span>
-          </router-link>
-          <router-link to="/feedback" class="quick-link">
-            <span class="link-icon">📝</span>
-            <span class="link-text">意见反馈</span>
-          </router-link>
-        </div>
-
-        <div class="profile-form">
-          <div class="form-group">
-            <label for="username">用户名</label>
-            <input 
-              type="text" 
-              id="username" 
-              v-model="form.username" 
-              placeholder="请输入用户名"
+        <div class="profile-header">
+          <div class="avatar-wrapper">
+            <img
+              :src="avatar || 'https://ui-avatars.com/api/?name=' + userInfo.username + '&background=random&size=128'"
+              :alt="userInfo.username"
+              class="profile-avatar"
+              @click="viewFullAvatar"
             />
           </div>
-          
-          <div class="form-group">
-            <label for="phone">手机号</label>
-            <input 
-              type="tel" 
-              id="phone" 
-              v-model="form.phone" 
-              placeholder="请输入手机号"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="email">邮箱</label>
-            <input 
-              type="email" 
-              id="email" 
-              v-model="form.email" 
-              placeholder="请输入邮箱"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="password">密码</label>
-            <input 
-              type="password" 
-              id="password" 
-              v-model="form.password" 
-              placeholder="请输入新密码"
-            />
-          </div>
-          
-          <button 
-            class="update-btn" 
-            :disabled="loading"
-            @click="handleUpdate"
-          >
-            {{ loading ? '更新中...' : '更新信息' }}
+          <h2>{{ userInfo.username }}</h2>
+          <button class="change-avatar-btn" @click="triggerAvatarUpload">
+            更改头像
           </button>
+          <input
+            type="file"
+            ref="avatarInput"
+            accept="image/*"
+            style="display: none"
+            @change="handleAvatarChange"
+          />
+          <div v-if="uploadingAvatar" class="avatar-uploading">上传中...</div>
         </div>
-        
+
+        <div class="profile-stats">
+          <div class="stat-item">
+            <span class="stat-value">{{ userInfo.likeCount || 0 }}</span>
+            <span class="stat-label">获赞</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ userInfo.postCount || 0 }}</span>
+            <span class="stat-label">帖子</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value">{{ userInfo.commentCount || 0 }}</span>
+            <span class="stat-label">评论</span>
+          </div>
+        </div>
+
+        <div class="profile-menu">
+          <button class="menu-item" @click="showEditForm = true">
+            <span class="menu-icon">✏️</span>
+            <span class="menu-text">修改信息</span>
+            <span class="menu-arrow">›</span>
+          </button>
+          <router-link to="/notification" class="menu-item">
+            <span class="menu-icon">🔔</span>
+            <span class="menu-text">我的通知</span>
+            <span class="menu-arrow">›</span>
+          </router-link>
+          <router-link to="/feedback" class="menu-item">
+            <span class="menu-icon">📝</span>
+            <span class="menu-text">意见反馈</span>
+            <span class="menu-arrow">›</span>
+          </router-link>
+        </div>
+
+        <div v-if="showEditForm" class="edit-section">
+          <h3>修改个人信息</h3>
+          <div class="profile-form">
+            <div class="form-group">
+              <label for="username">用户名</label>
+              <input
+                type="text"
+                id="username"
+                v-model="form.username"
+                placeholder="请输入用户名"
+              />
+              <span v-if="errors.username" class="error-text">{{ errors.username }}</span>
+            </div>
+
+            <div class="form-group">
+              <label for="phone">手机号</label>
+              <input
+                type="tel"
+                id="phone"
+                v-model="form.phone"
+                placeholder="请输入手机号"
+              />
+              <span v-if="errors.phone" class="error-text">{{ errors.phone }}</span>
+            </div>
+
+            <div class="form-group">
+              <label for="email">邮箱</label>
+              <input
+                type="email"
+                id="email"
+                v-model="form.email"
+                placeholder="请输入邮箱"
+              />
+              <span v-if="errors.email" class="error-text">{{ errors.email }}</span>
+            </div>
+
+            <div class="form-group">
+              <label for="password">密码（选填）</label>
+              <input
+                type="password"
+                id="password"
+                v-model="form.password"
+                placeholder="请输入新密码，不修改则留空"
+              />
+              <span v-if="errors.password" class="error-text">{{ errors.password }}</span>
+            </div>
+
+            <div class="form-actions">
+              <button class="cancel-btn" @click="showEditForm = false">取消</button>
+              <button
+                class="update-btn"
+                :disabled="loading"
+                @click="handleUpdate"
+              >
+                {{ loading ? '更新中...' : '确认修改' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="danger-zone">
           <h3>危险操作</h3>
           <button class="delete-btn" @click="confirmDelete">删除账户</button>
@@ -83,26 +136,141 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { userApi } from '@/api/user'
 
 const router = useRouter()
 const loading = ref<boolean>(false)
+const showEditForm = ref<boolean>(false)
+const avatar = ref<string>('')
+const uploadingAvatar = ref<boolean>(false)
+const avatarInput = ref<HTMLInputElement | null>(null)
+const userInfo = ref({
+  username: '',
+  likeCount: 0,
+  postCount: 0,
+  commentCount: 0
+})
 const form = ref({
   username: '',
   phone: '',
   email: '',
   password: ''
 })
+const errors = ref({
+  username: '',
+  phone: '',
+  email: '',
+  password: ''
+})
 
-const handleUpdate = async () => {
-  loading.value = true
+const viewFullAvatar = () => {
+  if (avatar.value) {
+    window.open(avatar.value, '_blank')
+  }
+}
+
+const triggerAvatarUpload = () => {
+  avatarInput.value?.click()
+}
+
+const handleAvatarChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    alert('请选择图片文件')
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('图片大小不能超过5MB')
+    return
+  }
+
+  uploadingAvatar.value = true
   try {
-    const response = await userApi.update(form.value)
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await userApi.uploadAvatar(formData)
     const data = response as any
     if (data.code === 200) {
+      avatar.value = data.data
+      localStorage.setItem('avatar', data.data)
+      alert('头像上传成功')
+    } else {
+      alert(data.message || '头像上传失败')
+    }
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    alert('头像上传失败')
+  } finally {
+    uploadingAvatar.value = false
+    target.value = ''
+  }
+}
+
+const validateForm = (): boolean => {
+  let isValid = true
+  errors.value = { username: '', phone: '', email: '', password: '' }
+
+  if (!form.value.username || form.value.username.trim().length < 2) {
+    errors.value.username = '用户名至少2个字符'
+    isValid = false
+  }
+
+  if (form.value.username && form.value.username.length > 20) {
+    errors.value.username = '用户名不能超过20个字符'
+    isValid = false
+  }
+
+  if (form.value.phone && !/^1[3-9]\d{9}$/.test(form.value.phone)) {
+    errors.value.phone = '请输入有效的手机号'
+    isValid = false
+  }
+
+  if (form.value.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.value.email)) {
+    errors.value.email = '请输入有效的邮箱'
+    isValid = false
+  }
+
+  if (form.value.password && form.value.password.length < 6) {
+    errors.value.password = '密码至少6个字符'
+    isValid = false
+  }
+
+  return isValid
+}
+
+onMounted(() => {
+  userInfo.value.username = localStorage.getItem('username') || ''
+  avatar.value = localStorage.getItem('avatar') || ''
+})
+
+const handleUpdate = async () => {
+  if (!validateForm()) {
+    return
+  }
+  loading.value = true
+  try {
+    const updateData: any = {}
+    if (form.value.username) updateData.username = form.value.username
+    if (form.value.phone) updateData.phone = form.value.phone
+    if (form.value.email) updateData.email = form.value.email
+    if (form.value.password) updateData.password = form.value.password
+
+    const response = await userApi.update(updateData)
+    const data = response as any
+    if (data.code === 200) {
+      if (form.value.username) {
+        localStorage.setItem('username', form.value.username)
+        userInfo.value.username = form.value.username
+      }
       alert('更新成功')
+      showEditForm.value = false
+      form.value.password = ''
     } else {
       alert(data.message || '更新失败')
     }
@@ -155,7 +323,6 @@ const handleLogout = async () => {
 }
 
 const goBack = () => {
-  // 直接返回首页，避免循环
   router.push('/')
 }
 </script>
@@ -228,52 +395,156 @@ const goBack = () => {
   padding: 2rem;
 }
 
-.profile-card h2 {
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.profile-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 1rem;
+  border: 3px solid #f0f0f0;
+}
+
+.avatar-wrapper {
+  margin-bottom: 0.5rem;
+}
+
+.profile-avatar {
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.profile-avatar:hover {
+  opacity: 0.8;
+}
+
+.change-avatar-btn {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  transition: color 0.2s ease;
+}
+
+.change-avatar-btn:hover {
+  color: #764ba2;
+}
+
+.avatar-uploading {
+  font-size: 0.85rem;
+  color: #667eea;
+  margin-top: 0.25rem;
+}
+
+.error-text {
+  color: #e74c3c;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+.profile-header h2 {
   font-size: 1.5rem;
   font-weight: bold;
   color: #333;
-  margin-bottom: 2rem;
-  text-align: center;
+  margin: 0;
 }
 
-.quick-links {
+.profile-stats {
   display: flex;
-  gap: 1rem;
+  justify-content: center;
+  gap: 3rem;
   margin-bottom: 2rem;
   padding-bottom: 1.5rem;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.quick-link {
-  flex: 1;
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #999;
+}
+
+.profile-menu {
+  margin-bottom: 2rem;
+}
+
+.menu-item {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  width: 100%;
   padding: 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
+  border: none;
+  background: none;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
   text-decoration: none;
-  border-radius: 10px;
-  transition: all 0.3s ease;
+  color: #333;
+  transition: background-color 0.3s ease;
 }
 
-.quick-link:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+.menu-item:first-child {
+  border-top: 1px solid #f0f0f0;
 }
 
-.link-icon {
+.menu-item:hover {
+  background-color: #f9f9f9;
+}
+
+.menu-icon {
   font-size: 1.2rem;
+  margin-right: 1rem;
 }
 
-.link-text {
-  font-size: 0.95rem;
-  font-weight: 500;
+.menu-text {
+  flex: 1;
+  text-align: left;
+  font-size: 1rem;
+}
+
+.menu-arrow {
+  font-size: 1.2rem;
+  color: #ccc;
+}
+
+.edit-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.edit-section h3 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 1.5rem;
+  text-align: center;
 }
 
 .profile-form {
-  margin-bottom: 3rem;
+  margin-bottom: 0;
 }
 
 .form-group {
@@ -303,8 +574,30 @@ const goBack = () => {
   box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
 }
 
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.cancel-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #fff;
+  color: #666;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background-color: #f5f5f5;
+}
+
 .update-btn {
-  width: 100%;
+  flex: 1;
   padding: 0.75rem;
   border: none;
   border-radius: 4px;
@@ -314,7 +607,6 @@ const goBack = () => {
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  margin-top: 1rem;
 }
 
 .update-btn:hover:not(:disabled) {
@@ -360,13 +652,21 @@ const goBack = () => {
   .header {
     padding: 1rem;
   }
-  
+
   .main {
     padding: 1rem;
   }
-  
+
   .profile-card {
     padding: 1.5rem;
+  }
+
+  .profile-stats {
+    gap: 2rem;
+  }
+
+  .stat-value {
+    font-size: 1.2rem;
   }
 }
 </style>

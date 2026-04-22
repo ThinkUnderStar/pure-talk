@@ -3,8 +3,8 @@ import { Result } from './user'
 
 export interface DoFeedback {
   userId: number
+  title: string
   content: string
-  type: string
 }
 
 export interface Feedback {

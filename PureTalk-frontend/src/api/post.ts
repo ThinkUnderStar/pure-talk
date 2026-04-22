@@ -13,6 +13,7 @@ export interface Post {
   content: string
   userId: number
   username: string
+  avatar: string
   likeCount: number
   viewCount: number
   commentCount: number
