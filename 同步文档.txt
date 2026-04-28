@@ -177,5 +177,5 @@ logging:
 
 --------------------------------------------------------------------------------------------
 
-
+ALTER TABLE posts ADD FULLTEXT INDEX ft_title (title) WITH PARSER ngram;
 
